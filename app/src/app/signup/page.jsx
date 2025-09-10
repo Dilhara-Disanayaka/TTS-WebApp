@@ -20,7 +20,7 @@ export default function SignupPage() {
     agreeToTerms: false,
   })
 
-  const handleSubmit = (e) => {
+  async function handleSubmit (e)  {
     e.preventDefault()
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match")
@@ -31,7 +31,12 @@ export default function SignupPage() {
       return
     }
     // Handle signup logic here
-    console.log("Signup attempt:", formData)
+     try{
+           const res=await axios.post('/signup',formData)
+           alert(res.data.message)
+      }catch(error){
+        console.error("Signup failed:", error)
+      }
   }
 
   const handleChange = (e) => {
