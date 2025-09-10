@@ -15,11 +15,30 @@ export default function LoginPage() {
     password: "",
   })
 
-  const handleSubmit = (e) => {
+  /*const handleSubmit = (e) => {
     e.preventDefault()
     // Handle login logic here
     console.log("Login attempt:", formData)
-  }
+  }*/
+  async function handleSubmit (event) {
+    event.preventDefault()
+    
+    
+      try{
+
+        const res=await axios.post('/login',{formData})
+        console.log('adada')
+        if(res.data.accessToken){
+          localStorage.setItem('accessToken',res.data.accessToken)
+          alert('Login successful')
+        }else{
+            alert('Login failed')
+        }
+      }catch(error){
+        console.error("Login failed:", error)
+      }
+    
+}
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -51,7 +70,7 @@ export default function LoginPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" required>Email</Label>
                 <Input
                   id="email"
                   name="email"
@@ -65,7 +84,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" >Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
