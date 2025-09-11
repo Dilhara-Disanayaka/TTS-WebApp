@@ -1,0 +1,11 @@
+.venv/
+
+# pycache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# pytorch files
+*.pt
+*.pth
+
