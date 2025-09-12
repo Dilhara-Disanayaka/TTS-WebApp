@@ -1,37 +1,62 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { AudioPlayer } from "@/components/audio-player"
-import { AudioPlaylist } from "@/components/audio-playlist"
-import { DownloadManagerWidget } from "@/components/download-manager-widget"
-import { useAudioGeneration } from "@/hooks/use-audio-generation"
-import { Mic, Play, History, Settings, Loader2 } from "lucide-react"
+import { Mic, Play, Loader2, Volume2 } from "lucide-react"
+import { startTextS } from "./romanize"
 
 export default function DashboardPage() {
   const [text, setText] = useState("")
-  const [voice, setVoice] = useState("female-1")
-  const [speed, setSpeed] = useState([1.0])
-  const [pitch, setPitch] = useState([1.0])
-
-  const { generateAudio, isGenerating, currentAudio, audioHistory, error } = useAudioGeneration()
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [error, setError] = useState("")
+  const [audioUrl, setAudioUrl] = useState(null)
+  const audioRef = useRef(null)
 
   const handleGenerate = async () => {
     if (!text.trim()) return
 
-    await generateAudio({
-      text: text.trim(),
-      voice,
-      speed: speed[0],
-      pitch: pitch[0],
-    })
+    setIsGenerating(true)
+    setError("")
+    setAudioUrl(null)
+
+    try {
+      // Convert Sinhala text to romanized text
+      const romanizedText = startTextS(text.trim())
+
+      // Send romanized text to backend
+      const response = await fetch('/api/generate-speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: romanizedText }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate speech')
+      }
+
+      // Create audio URL from response
+      const audioBlob = await response.blob()
+      const url = URL.createObjectURL(audioBlob)
+      setAudioUrl(url)
+
+      // // Auto play the audio
+      // setTimeout(() => {
+      //   if (audioRef.current) {
+      //     audioRef.current.play()
+      //   }
+      // }, 100)
+
+    } catch (err) {
+      console.error('Error generating speech:', err)
+      setError('Failed to generate speech. Please try again.')
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   const sampleTexts = [
@@ -53,186 +78,107 @@ export default function DashboardPage() {
                 SinhalaVoice
               </span>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge variant="secondary">Pro Plan</Badge>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="generate" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="generate">Generate Speech</TabsTrigger>
-            <TabsTrigger value="library">Audio Library</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="generate" className="space-y-6">
-            <div className="grid lg:grid-cols-3 gap-6">
-              {/* Text Input Section */}
-              <div className="lg:col-span-2">
-                <Card className="glass-card border-blue-100">
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Mic className="h-5 w-5 mr-2 text-blue-600" />
-                      Text to Speech
-                    </CardTitle>
-                    <CardDescription>Enter your Sinhala text below to generate natural voice audio</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="text-input">Sinhala Text</Label>
-                      <Textarea
-                        id="text-input"
-                        placeholder="ඔබගේ සිංහල පෙළ මෙහි ටයිප් කරන්න..."
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        className="min-h-[200px] border-blue-200 focus:border-blue-500"
-                      />
-                      <div className="flex justify-between text-sm text-slate-500">
-                        <span>{text.length} characters</span>
-                        <span>
-                          {
-                            text
-                              .trim()
-                              .split(/\s+/)
-                              .filter((word) => word.length > 0).length
-                          }{" "}
-                          words
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Sample Texts */}
-                    <div className="space-y-2">
-                      <Label>Quick Samples</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {sampleTexts.map((sample, index) => (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setText(sample)}
-                            className="text-xs border-blue-200 hover:bg-blue-50"
-                          >
-                            {sample.substring(0, 20)}...
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={handleGenerate}
-                      disabled={!text.trim() || isGenerating}
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <Play className="h-4 w-4 mr-2" />
-                          Generate Speech
-                        </>
-                      )}
-                    </Button>
-
-                    {error && (
-                      <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                        <p className="text-sm text-red-600">{error}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Voice Settings */}
-              <div className="space-y-6">
-                <Card className="glass-card border-blue-100">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Voice Settings</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Voice Type</Label>
-                      <Select value={voice} onValueChange={setVoice}>
-                        <SelectTrigger className="border-blue-200">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="female-1">Female Voice 1</SelectItem>
-                          <SelectItem value="female-2">Female Voice 2</SelectItem>
-                          <SelectItem value="male-1">Male Voice 1</SelectItem>
-                          <SelectItem value="male-2">Male Voice 2</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Speed: {speed[0]}x</Label>
-                      <Slider
-                        value={speed}
-                        onValueChange={setSpeed}
-                        min={0.5}
-                        max={2.0}
-                        step={0.1}
-                        className="w-full"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Pitch: {pitch[0]}x</Label>
-                      <Slider
-                        value={pitch}
-                        onValueChange={setPitch}
-                        min={0.5}
-                        max={2.0}
-                        step={0.1}
-                        className="w-full"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Current Audio Player */}
-                {currentAudio && (
-                  <Card className="glass-card border-blue-100">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Generated Audio</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <AudioPlayer audio={currentAudio} />
-                    </CardContent>
-                  </Card>
-                )}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Card className="glass-card border-blue-100">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Mic className="h-5 w-5 mr-2 text-blue-600" />
+              Sinhala Text to Speech
+            </CardTitle>
+            <CardDescription>Enter your Sinhala text below to generate natural voice audio</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="text-input">Sinhala Text</Label>
+              <Textarea
+                id="text-input"
+                placeholder="ඔබගේ සිංහල පෙළ මෙහි ටයිප් කරන්න..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="min-h-[200px] border-blue-200 focus:border-blue-500"
+              />
+              <div className="flex justify-between text-sm text-slate-500">
+                <span>{text.length} characters</span>
+                <span>
+                  {
+                    text
+                      .trim()
+                      .split(/\s+/)
+                      .filter((word) => word.length > 0).length
+                  }{" "}
+                  words
+                </span>
               </div>
             </div>
-          </TabsContent>
 
-          <TabsContent value="library">
-            <Card className="glass-card border-blue-100">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <History className="h-5 w-5 mr-2 text-blue-600" />
-                  Audio Library
-                </CardTitle>
-                <CardDescription>Manage your generated audio files</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AudioPlaylist audioList={audioHistory} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            {/* Sample Texts */}
+            <div className="space-y-2">
+              <Label>Quick Samples</Label>
+              <div className="flex flex-wrap gap-2">
+                {sampleTexts.map((sample, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setText(sample)}
+                    className="text-xs border-blue-200 hover:bg-blue-50"
+                  >
+                    {sample.substring(0, 20)}...
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Generate Button */}
+            <Button
+              onClick={handleGenerate}
+              disabled={!text.trim() || isGenerating}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Generate Speech
+                </>
+              )}
+            </Button>
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+
+            {/* Audio Player */}
+            {audioUrl && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Volume2 className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">Audio Generated Successfully</span>
+                </div>
+                <audio
+                  ref={audioRef}
+                  controls
+                  className="w-full"
+                  src={audioUrl}
+                >
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      <DownloadManagerWidget />
     </div>
   )
 }
