@@ -25,7 +25,7 @@ export default function HomePage() {
                 <Button variant="ghost">Sign In</Button>
               </Link>
               <Link href="/signup">
-                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white">
                   Get Started
                 </Button>
               </Link>
@@ -53,14 +53,14 @@ export default function HomePage() {
               <Link href="/dashboard">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
                 >
                   <Play className="mr-2 h-5 w-5" />
                   Try Demo
                 </Button>
               </Link>
               <Link href="/signup">
-                <Button size="lg" variant="outline" className="border-blue-200 hover:bg-blue-50 bg-transparent">
+                <Button size="lg" variant="outline" className="border-blue-200 hover:bg-blue-50 bg-transparent text-slate-600">
                   Start Free Trial
                 </Button>
               </Link>
@@ -85,7 +85,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <Card className="glass-card border-blue-100 hover:shadow-lg transition-all duration-300">
+            <Card className="bg-white border border-blue-100 hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center mb-4">
                   <Mic className="h-6 w-6 text-white" />
@@ -97,7 +97,7 @@ export default function HomePage() {
               </CardHeader>
             </Card>
 
-            <Card className="glass-card border-blue-100 hover:shadow-lg transition-all duration-300">
+            <Card className="bg-white border border-blue-100 hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center mb-4">
                   <Download className="h-6 w-6 text-white" />
@@ -109,7 +109,7 @@ export default function HomePage() {
               </CardHeader>
             </Card>
 
-            <Card className="glass-card border-blue-100 hover:shadow-lg transition-all duration-300">
+            <Card className="bg-white border border-blue-100 hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mb-4">
                   <Users className="h-6 w-6 text-white" />
