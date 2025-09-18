@@ -24,15 +24,13 @@ export default function DashboardPage() {
 
     try {
       // Convert Sinhala text to romanized text
-      const romanizedText = startTextS(text.trim())
-
       // Send romanized text to backend
       const response = await fetch('/api/generate-speech', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: romanizedText }),
+        body: JSON.stringify({ text: text.trim() }),
       })
 
       if (!response.ok) {
@@ -67,14 +65,19 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="relative min-h-screen bg-gradient-to-br from-white via-blue-50 to-indigo-100 overflow-x-hidden">
+      {/* Decorative SVG background */}
+      <svg className="absolute top-0 left-0 w-full h-80 opacity-30 pointer-events-none select-none" viewBox="0 0 1440 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#a5b4fc" fillOpacity="0.3" d="M0,160L60,170.7C120,181,240,203,360,197.3C480,192,600,160,720,133.3C840,107,960,85,1080,101.3C1200,117,1320,171,1380,197.3L1440,224L1440,0L1380,0C1320,0,1200,0,1080,0C960,0,840,0,720,0C600,0,480,0,360,0C240,0,120,0,60,0L0,0Z" />
+      </svg>
+
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm">
+      <header className="border-b bg-white/80 backdrop-blur-md shadow-sm z-10 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center">
-              <Mic className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <Mic className="h-10 w-10 text-blue-600 drop-shadow-md" />
+              <span className="ml-3 text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight">
                 SinhalaVoice
               </span>
             </div>
@@ -82,26 +85,26 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="glass-card border-blue-100">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <Card className="border-0 shadow-xl rounded-3xl bg-white/80 backdrop-blur-lg ring-1 ring-blue-100">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Mic className="h-5 w-5 mr-2 text-blue-600" />
+            <CardTitle className="flex items-center text-2xl font-bold text-blue-700">
+              <Mic className="h-6 w-6 mr-2 text-blue-500" />
               Sinhala Text to Speech
             </CardTitle>
-            <CardDescription>Enter your Sinhala text below to generate natural voice audio</CardDescription>
+            <CardDescription className="text-base text-slate-600">Enter your Sinhala text below to generate natural voice audio</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-8">
             <div className="space-y-2">
-              <Label htmlFor="text-input">Sinhala Text</Label>
+              <Label htmlFor="text-input" className="text-base font-medium text-blue-700">Sinhala Text</Label>
               <Textarea
                 id="text-input"
                 placeholder="ඔබගේ සිංහල පෙළ මෙහි ටයිප් කරන්න..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="min-h-[200px] border-blue-200 focus:border-blue-500"
+                className="min-h-[160px] border-blue-200 focus:border-blue-400 bg-white/70 rounded-xl shadow-sm text-lg placeholder:text-slate-400 text-slate-500"
               />
-              <div className="flex justify-between text-sm text-slate-500">
+              <div className="flex justify-between text-xs text-slate-500">
                 <span>{text.length} characters</span>
                 <span>
                   {
@@ -117,7 +120,7 @@ export default function DashboardPage() {
 
             {/* Sample Texts */}
             <div className="space-y-2">
-              <Label>Quick Samples</Label>
+              <Label className="text-base font-medium text-blue-700">Quick Samples</Label>
               <div className="flex flex-wrap gap-2">
                 {sampleTexts.map((sample, index) => (
                   <Button
@@ -125,7 +128,7 @@ export default function DashboardPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setText(sample)}
-                    className="text-xs border-blue-200 hover:bg-blue-50"
+                    className="text-xs border-blue-200 hover:bg-blue-100/60 hover:border-blue-300 rounded-lg transition-all text-slate-600"
                   >
                     {sample.substring(0, 20)}...
                   </Button>
@@ -137,16 +140,16 @@ export default function DashboardPage() {
             <Button
               onClick={handleGenerate}
               disabled={!text.trim() || isGenerating}
-              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              className="w-full py-4 text-md font-medium rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 shadow-md transition-all text-white"
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                   Generating...
                 </>
               ) : (
                 <>
-                  <Play className="h-4 w-4 mr-2" />
+                  <Play className="h-5 w-5 mr-2" />
                   Generate Speech
                 </>
               )}
@@ -154,22 +157,22 @@ export default function DashboardPage() {
 
             {/* Error Message */}
             {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <div className="p-3 bg-red-50/80 border border-red-200 rounded-lg shadow-sm">
                 <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
 
             {/* Audio Player */}
             {audioUrl && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+              <div className="p-4 bg-green-50/80 border border-green-200 rounded-xl shadow-sm">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Volume2 className="h-4 w-4 text-green-600" />
+                  <Volume2 className="h-5 w-5 text-green-600" />
                   <span className="text-sm font-medium text-green-800">Audio Generated Successfully</span>
                 </div>
                 <audio
                   ref={audioRef}
                   controls
-                  className="w-full"
+                  className="w-full rounded-lg border border-green-200"
                   src={audioUrl}
                 >
                   Your browser does not support the audio element.

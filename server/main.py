@@ -1,9 +1,18 @@
+
 from TTS.utils.synthesizer import Synthesizer
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import io
 from fastapi.responses import Response
+from phonemizer import phonemize
+from phonemizer.backend.espeak.wrapper import EspeakWrapper
+
+# For Windows users, specify the path to the eSpeak NG DLL if needed
+# EspeakWrapper.set_library('C:\\Program Files\\eSpeak NG\\libespeak-ng.dll')
+
+# For macOS users, specify the path to the eSpeak library if needed
+EspeakWrapper.set_library('/opt/homebrew/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib')
 
 app = FastAPI()
 
@@ -19,8 +28,8 @@ app.add_middleware(
 class TextRequest(BaseModel):
     text: str
 
-model_path = "sinhala.pth"
-config_path = "config.json"
+model_path = "tacotron2.pth"
+config_path = "tacotron2.json"
 
 synthesizer = Synthesizer(
     tts_checkpoint=model_path,
@@ -29,7 +38,10 @@ synthesizer = Synthesizer(
 
 @app.post("/synthesize")
 async def synthesize(request: TextRequest):
-    wav = synthesizer.tts(request.text)
+
+    ph = phonemize(request.text, language='si', strip=True, preserve_punctuation=True,punctuation_marks=';:,.!?¡¿—…"«»“”‘’\'"()[]{}=+-*/\\')
+
+    wav = synthesizer.tts(ph)
 
     audio_buffer = io.BytesIO()
     synthesizer.save_wav(wav, audio_buffer)
@@ -40,3 +52,4 @@ async def synthesize(request: TextRequest):
         media_type="audio/wav",
         headers={"Content-Disposition": "inline; filename=synthesized.wav"},
     )
+
