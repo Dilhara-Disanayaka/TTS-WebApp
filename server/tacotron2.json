@@ -1,5 +1,5 @@
 {
-    "output_path": "output/tacotron2-DDC-sinhala",
+    "output_path": "output/tacotron2-Mettananda",
     "logger_uri": null,
     "run_name": "sinhala-ddc",
     "project_name": null,
@@ -103,8 +103,8 @@
         "eos": "",
         "bos": "",
         "blank": null,
-        "characters": "aa\u02d0\u00e6\u00e6\u02d0ii\u02d0uu\u02d0ee\u02d0oo\u02d0ruru\u02d0lili\u02d0\u0259\u0250\u028a\u026aaiaukk\u02b0gg\u02b0\u014b\u0261t\u0361\u0283t\u0361\u0283\u02b0d\u0361\u0292d\u0361\u0292\u02b0\u0272\u0288\u0288\u02b0\u0256\u0256\u02b0\u0273t\u032at\u032a\u02b0d\u032ad\u032a\u02b0n\u032app\u02b0bb\u02b0mjrlw\u026d\u0279\u0283\u0282shf\u03c7\u014bg\u0272d\u0361\u0292\u0273\u0256n\u032ad\u032ambgn\u1d50\u207f\u1d51X1X20123456789",
-        "punctuations": ".,!?;:=()-[]\"'\u201c\u201d\u2018\u2019\u0df4 \n\r\t#",
+        "characters": "a\u0259\u200b\u02d0\u00e6ii\u02d0uu\u02d0ee\u02d0oo\u02d0auairurikgg\u014b\u0261cd\u0361\u0292\u0272\u0288\u0256\u0273t\u032ad\u032anpbmmbnd\u032a\u0256njrlvf\u0283\u0282sh\u026d\u0272\u200c\u200d\u0272",
+        "punctuations": "\u2013.,!?;:=()-[]\"'\u201c\u201d\u2018\u2019\u0df4 \n\r\t#",
         "phonemes": "",
         "is_unique": true,
         "is_sorted": true
@@ -127,8 +127,8 @@
         {
             "formatter": "ljspeech",
             "dataset_name": "",
-            "path": "dataset",
-            "meta_file_train": "metadata.csv",
+            "path": "dataset_pathnirvana",
+            "meta_file_train": "phonemized.csv",
             "ignored_speakers": null,
             "language": "",
             "phonemizer": "",
@@ -137,11 +137,11 @@
         }
     ],
     "test_sentences": [
-        "\u0250pi \u0261ed\u0259\u0279\u0259 j\u0250n\u0259wa\u02d0.",
-        "\u0250kka\u02d0 \u0279\u0250\u0288\u0259 \u0261ihin \u0250d\u0259\u0288\u0259 ma\u02d0s\u0259j\u0259k wen\u0259wa\u02d0.",
-        "he\u0288\u0259 din\u0259 p\u00e6w\u00e6twi\u02d0m\u0259\u0288\u0259 nij\u0259mit\u0259 k\u0250mi\u0288u \u0279\u00e6swi\u02d0m\u0259 w\u0250r\u0283a\u02d0w nisa\u02d0 nop\u00e6w\u00e6twe\u02d0.",
-        "a\u02d0da\u02d0n\u0259 mew\u0259l\u0259m utsa\u02d0h\u0259 k\u0259\u0279\u0259nn\u0259.",
-        "p\u0259h\u0259t\u0259 d\u00e6k\u0259n\u0259 obe\u02d0 b\u02b0a\u02d0\u0283\u0259w s\u0259ha\u02d0 a\u02d0da\u02d0n\u0259 mew\u0259l\u0259m to\u02d0\u0279a\u02d0 \u0283\u0259jip ki\u0279i\u02d0m\u0259 \u0250\u0279\u0259\u1d50b\u0259nn\u0259."
+        "mah\u0259 d\u032aava\u02d0le\u02d0 kirib\u0259t\u032ago\u0256\u0259 b\u00e6\u014bkuvak koll\u0259 kaji.",
+        "\u026dam\u0259jek v\u00e6\u0288en\u0259 ga\u02d0ne\u02d0 mage\u02d0 had\u032a\u0259v\u0259t\u032a\u0259 nav\u0259t\u032ain\u0259va\u02d0 vage\u02d0 d\u032a\u00e6nun\u0259.",
+        "pa\u026d\u0259lin\u200c ha\u02d0 usin\u200c a\u0256i hat\u032a\u0259k\u200c b\u00e6gin\u200c van\u0259 mehi bit\u032at\u032aij\u0259k\u0259 gan\u0259k\u0259m\u0259 a\u0256i d\u032aek\u0259k\u0259\u0288\u0259 va\u0256a\u02d0 v\u00e6\u0256i ja.",
+        "ek\u0259v\u0259r\u0259 sa\u0288an per\u0259munu kihip\u0259j\u0259k\u0259 sa\u0288an kerum\u0259\u0288\u0259 ana\u02d0g\u0259t\u032a\u0259je\u02d0d\u032ai\u02d0 rad\u0292\u0259j\u0259\u0288\u0259 sid\u032auv\u0259n\u0259 bav\u0259 b\u00e6lu b\u00e6lm\u0259\u0288\u0259 penenn\u0259\u0288\u0259 \u00e6t\u032a\u0259.",
+        "d\u032aed\u032a\u0259has pah\u0259\u026dov\u0259 d\u0292an\u0259va\u02d0ri a\u0288\u0259 v\u00e6nid\u032aa\u02d0 p\u00e6v\u00e6t\u032ai d\u0292ana\u02d0d\u032aip\u0259t\u032aiv\u0259r\u0259n\u0259je\u02d0d\u032ai\u02d0 me\u02d0 ra\u0288e\u02d0 at\u032aib\u0259hut\u032a\u0259r\u0259jak d\u0292an\u0259t\u032aa\u02d0v\u0259ge\u02d0 cand\u032a\u0259jen mait\u032ari\u02d0pa\u02d0l\u0259 sirise\u02d0n\u0259 mah\u0259t\u032aa\u02d0 d\u0292ana\u02d0d\u032aip\u0259t\u032ai d\u032aur\u0259j\u0259\u0288\u0259"
     ],
     "eval_split_max_size": null,
     "eval_split_size": 0.01,
@@ -164,7 +164,7 @@
     "use_capacitron_vae": false,
     "capacitron_vae": null,
     "num_speakers": 1,
-    "num_chars": 79,
+    "num_chars": 64,
     "r": 1,
     "gradual_training": null,
     "memory_size": -1,
@@ -205,6 +205,6 @@
     "decoder_ssim_alpha": 0.0,
     "postnet_ssim_alpha": 0.0,
     "ga_alpha": 5.0,
-    "restore_path": "C:/Users/tumas/OneDrive/Desktop/Sinhala-TTS/output/tacotron2-DDC-sinhala/sinhala-ddc-September-13-2025_02+55AM-cbbc725/checkpoint_303000.pth",
+    "restore_path": "output\\tacotron2-DDC-sinhala\\sinhala-ddc-September-13-2025_02+55AM-cbbc725\\checkpoint_303000.pth",
     "github_branch": "* main"
 }
