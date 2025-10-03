@@ -5,21 +5,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import io
 from fastapi.responses import Response
-from phonemizer import phonemize
-from phonemizer.backend.espeak.wrapper import EspeakWrapper
-
-# For Windows users, specify the path to the eSpeak NG DLL if needed
-# EspeakWrapper.set_library('C:\\Program Files\\eSpeak NG\\libespeak-ng.dll')
-
-# For macOS users, specify the path to the eSpeak library if needed
-EspeakWrapper.set_library('/opt/homebrew/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib')
+from g2p import convert_text
 
 app = FastAPI()
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.js default port
+    allow_origins=["http://localhost:3000"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,18 +21,24 @@ app.add_middleware(
 class TextRequest(BaseModel):
     text: str
 
-model_path = "tacotron2.pth"
-config_path = "tacotron2.json"
+tts_path = "tacotron2.pth"
+tts_config_path = "tacotron2.json"
+vocoder_path = "hifigan.pth"
+vocoder_config_path = "hifigan.json"
 
 synthesizer = Synthesizer(
-    tts_checkpoint=model_path,
-    tts_config_path=config_path,
+    tts_checkpoint=tts_path,
+    tts_config_path=tts_config_path,
+    vocoder_checkpoint=vocoder_path,
+    vocoder_config=vocoder_config_path,
 )
 
 @app.post("/synthesize")
 async def synthesize(request: TextRequest):
 
-    ph = phonemize(request.text, language='si', strip=True, preserve_punctuation=True,punctuation_marks=';:,.!?¡¿—…"«»“”‘’\'"()[]{}=+-*/\\')
+    ph = convert_text(request.text)
+
+    print(f"Phonemized text: {ph}")
 
     wav = synthesizer.tts(ph)
 
@@ -52,4 +51,3 @@ async def synthesize(request: TextRequest):
         media_type="audio/wav",
         headers={"Content-Disposition": "inline; filename=synthesized.wav"},
     )
-
