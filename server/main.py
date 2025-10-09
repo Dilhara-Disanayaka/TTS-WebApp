@@ -15,6 +15,7 @@ import uuid
 from mutagen.mp3 import MP3
 from mutagen.wave import WAVE
 import datetime
+from num2sinhala import num_convert
 load_dotenv()
 app = FastAPI()
 
@@ -39,10 +40,10 @@ def read_root():
 class TextRequest(BaseModel):
     text: str
 
-tts_path = "tacotron2.pth"
-tts_config_path = "tacotron2.json"
-vocoder_path = "hifigan.pth"
-vocoder_config_path = "hifigan.json"
+tts_path = "models/dinithi.pth"
+tts_config_path = "models/dinithi.json"
+vocoder_path = "models/dinithi_vocoder.pth"
+vocoder_config_path = "models/dinithi_vocoder.json"
 
 synthesizer = Synthesizer(
     tts_checkpoint=tts_path,
@@ -55,7 +56,10 @@ synthesizer = Synthesizer(
 @app.post("/synthesize")
 async def synthesize(request: TextRequest):
 
-    ph = convert_text(request.text)
+    # Convert numbers to Sinhala words
+    text_with_numbers_converted = num_convert(request.text)
+    print(f"Text after number conversion: {text_with_numbers_converted}")
+    ph = convert_text(text_with_numbers_converted)
 
     print(f"Phonemized text: {ph}")
 

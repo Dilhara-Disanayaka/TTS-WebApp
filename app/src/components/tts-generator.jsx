@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Slider } from "@/components/ui/slider"
 import { AudioPlayer } from "@/components/audio-player"
 import { Mic, Volume2, Download, AudioWaveform as Waveform, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -13,10 +12,8 @@ export function TTSGenerator() {
   const [text, setText] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioUrl, setAudioUrl] = useState(null)
-  const [speed, setSpeed] = useState([1])
-  const [pitch, setPitch] = useState([1])
   const [error, setError] = useState("")
-   const handleGenerate = async () => {
+  const handleGenerate = async () => {
     if (!text.trim()) return
 
     setIsGenerating(true)
@@ -103,18 +100,6 @@ export function TTSGenerator() {
                   <Sparkles className="w-3 h-3" />
                   AI Powered
                 </Badge>
-              </div>
-            </div>
-
-            {/* Voice Controls */}
-            <div className="space-y-4 pt-4 border-t border-border">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Speed: {speed[0]}x</label>
-                <Slider value={speed} onValueChange={setSpeed} max={2} min={0.5} step={0.1} className="w-full" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Pitch: {pitch[0]}x</label>
-                <Slider value={pitch} onValueChange={setPitch} max={2} min={0.5} step={0.1} className="w-full" />
               </div>
             </div>
 
