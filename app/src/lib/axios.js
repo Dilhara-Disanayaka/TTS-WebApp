@@ -1,55 +1,37 @@
-// lib/axios.js
+// lib/http-client.js
 import axios from "axios";
+import { supabase } from "./supabase";
 
-const axiosInstance = axios.create({
+const httpClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
-  withCredentials: true, // needed for cookies
 });
 
-let isRefreshing = false;
-
-axiosInstance.interceptors.request.use(async (config) => {
-  const token = localStorage.getItem("accessToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Request interceptor to add auth token
+httpClient.interceptors.request.use(async (config) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
+    }
+  } catch (error) {
+    console.error('Error getting session:', error);
   }
   return config;
 });
 
-// Response interceptor to refresh token if expired
-axiosInstance.interceptors.response.use(
+// Response interceptor for error handling
+httpClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-
-    if (
-      error.response &&
-      error.response.status === 401 &&
-      !originalRequest._retry
-    ) {
-      originalRequest._retry = true;
-
-      if (!isRefreshing) {
-        isRefreshing = true;
-        try {
-          const res = await axiosInstance.get("/api/auth/refresh");
-          const newToken = res.data.accessToken;
-          localStorage.setItem("accessToken", newToken);
-          axiosInstance.defaults.headers.Authorization = `Bearer ${newToken}`;
-        } catch (e) {
-          localStorage.removeItem("accessToken");
-          window.location.href = "/login"; // force logout
-          return Promise.reject(e);
-        } finally {
-          isRefreshing = false;
-        }
+    if (error.response?.status === 401) {
+      // Token expired or invalid, redirect to login
+      await supabase.auth.signOut();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
       }
-
-      return axiosInstance(originalRequest);
     }
-
     return Promise.reject(error);
   }
 );
 
-export default axiosInstance;
+export default httpClient;

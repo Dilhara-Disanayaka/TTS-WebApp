@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { User, Mail, Calendar, Settings, Crown } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
-export function UserProfile({ user }) {
-  const [name, setName] = useState(user?.name || "")
+export function UserProfile() {
+  const { user } = useAuth()
+  const [name, setName] = useState(user?.user_metadata?.full_name || "")
   const [email, setEmail] = useState(user?.email || "")
 
   return (
@@ -30,9 +32,8 @@ export function UserProfile({ user }) {
         <Card className="border-border/50">
           <CardHeader className="text-center">
             <Avatar className="w-20 h-20 mx-auto">
-              <AvatarFallback className="bg-gradient-to-r from-primary to-accent text-primary-foreground text-2xl">
-                {user?.name?.charAt(0) || "U"}
-              </AvatarFallback>
+              <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.user_metadata?.full_name || user?.email} />
+              <AvatarFallback>{(user?.user_metadata?.full_name || user?.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <CardTitle className="mt-4">{user?.name}</CardTitle>
             <CardDescription>{user?.email}</CardDescription>

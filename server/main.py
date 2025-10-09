@@ -130,7 +130,7 @@ async def google_auth():
         redirect_url = supabase.auth.sign_in_with_oauth(
             {
                 "provider": "google",
-                "options": {"redirect_to": "http://localhost:3000/Home"},
+                "options": {"redirect_to": "http://localhost:3000/home"},
             }
         )
         return {"auth_url": redirect_url.url}
