@@ -1,28 +1,20 @@
 
+import io
 import os
 import traceback
-##from TTS.utils.synthesizer import Synthesizer
-from fastapi import FastAPI,UploadFile,Form
+from TTS.utils.synthesizer import Synthesizer
+from fastapi import FastAPI, Response,UploadFile,Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import io
-from fastapi.responses import JSONResponse, Response
-from phonemizer import phonemize
 from phonemizer.backend.espeak.wrapper import EspeakWrapper
 from dotenv import load_dotenv
+from g2p import convert_text
 from supabase import  create_client,Client
 from fastapi import HTTPException, Request
 import uuid
 from mutagen.mp3 import MP3
 from mutagen.wave import WAVE
 import datetime
-##from mutagen.mp3 import MP3
-##from mutagen.wave import WAVE
-# For Windows users, specify the path to the eSpeak NG DLL if needed
-# EspeakWrapper.set_library('C:\\Program Files\\eSpeak NG\\libespeak-ng.dll')
-
-# For macOS users, specify the path to the eSpeak library if needed
-EspeakWrapper.set_library('/opt/homebrew/Cellar/espeak-ng/1.52.0/lib/libespeak-ng.1.dylib')
 load_dotenv()
 app = FastAPI()
 
@@ -43,7 +35,7 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"message": "Hello, Supabase with FastAPI is working!"}
-'''
+
 class TextRequest(BaseModel):
     text: str
 
@@ -63,7 +55,9 @@ synthesizer = Synthesizer(
 @app.post("/synthesize")
 async def synthesize(request: TextRequest):
 
-    ph = phonemize(request.text, language='si', strip=True, preserve_punctuation=True,punctuation_marks=';:,.!?¡¿—…"«»“”‘’\'"()[]{}=+-*/\\')
+    ph = convert_text(request.text)
+
+    print(f"Phonemized text: {ph}")
 
     wav = synthesizer.tts(ph)
 
@@ -72,10 +66,12 @@ async def synthesize(request: TextRequest):
     audio_buffer.seek(0)
 
     return Response(
-       content=audio_buffer.getvalue(),
+        content=audio_buffer.getvalue(),
         media_type="audio/wav",
         headers={"Content-Disposition": "inline; filename=synthesized.wav"},
-   )'''
+    )
+
+
 class SignupRequest(BaseModel):
     email: str
     password: str
