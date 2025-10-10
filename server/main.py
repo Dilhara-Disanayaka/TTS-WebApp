@@ -40,8 +40,8 @@ def read_root():
 class TextRequest(BaseModel):
     text: str
 
-tts_path = "models/dinithi.pth"
-tts_config_path = "models/dinithi.json"
+tts_path = "models/dinithi2.pth"
+tts_config_path = "models/dinithi2.json"
 vocoder_path = "models/dinithi_vocoder.pth"
 vocoder_config_path = "models/dinithi_vocoder.json"
 
