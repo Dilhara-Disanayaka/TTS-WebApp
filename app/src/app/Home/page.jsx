@@ -7,17 +7,17 @@ import { TTSGenerator } from "@/components/tts-generator"
 import { UserProfile } from "@/components/user-profile"
 import { AudioHistory } from "@/components/audio-history"
 
-export default function Dashboard({ user, onLogout }) {
+export default function Dashboard() {
   const [activeView, setActiveView] = useState("generator")
 
   return (
     <div className="min-h-screen bg-background">
-      <Header user={user} onLogout={onLogout} />
+      <Header />
       <div className="flex">
         <Sidebar activeView={activeView} onViewChange={setActiveView} />
         <main className="flex-1 p-6">
           {activeView === "generator" && <TTSGenerator />}
-          {activeView === "profile" && <UserProfile user={user} />}
+          {activeView === "profile" && <UserProfile />}
           {activeView === "history" && <AudioHistory />}
         </main>
       </div>

@@ -1,97 +1,95 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription, DialogFooter,} from "@/components/ui/dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Mic, Volume2, AudioWaveform as Waveform } from "lucide-react"
-import axios from "axios"
-//import { redirect } from "next/dist/server/api-utils"
-import { useRouter } from "next/navigation"
-export default function LoginForm() {
+
+export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [fullName, setFullName] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const router=useRouter()
+
+  const router = useRouter()
+  const { signIn, signUp, signInWithGoogle, user } = useAuth()
+
+  useEffect(() => {
+    if (user) {
+      router.push("/home")
+    }
+  }, [user, router])
+
   const handleSubmit = async (e) => {
-  
     e.preventDefault()
-    setIsLoading(true)
+    setError("")
+    setLoading(true)
 
-    if (isSignUp) {
-      if (password !== confirmPassword) {
-        alert("Passwords don't match!")
-        setIsLoading(false)
-        return
-      }
-      if (fullName.trim().length < 2) {
-        alert("Please enter your full name")
-        setIsLoading(false)
-        return
-      }
-      try{
-           const res=await axios.post('http://127.0.0.1:8000/signup',{email:email,password:password,name:fullName})
-           alert(res.data.message)
-           console.log(res.data)
-           setShowConfirmDialog(true)
-      }catch(error){
-        console.error("Signup failed:", error)
-      }
-  
-
-
-
-    }else{
-      try{
-        console.log(email,password)
-        const res=await axios.post('http://127.0.0.1:8000/login',({email:email,password:password}))
-        console.log('adada')
-        if(res.data.access_token){
-          localStorage.setItem('accessToken',res.data.access_token)
-          alert('Login successful')
-          router.push("/Home")
-        }else{
-            alert('Login failed')
-        }
-      }catch(error){
-        console.error("Login failed:", error)
-      }
+    if (isSignUp && password !== confirmPassword) {
+      setError("Passwords don't match")
+      setLoading(false)
+      return
     }
 
-    // Simulate login/signup
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    if (isSignUp && fullName.trim().length < 2) {
+      setError("Please enter your full name")
+      setLoading(false)
+      return
+    }
 
-    
-
-    setIsLoading(false)
+    try {
+      if (isSignUp) {
+        const { error } = await signUp(email, password)
+        if (error) {
+          setError(error.message)
+        } else {
+          setShowConfirmDialog(true)
+        }
+      } else {
+        const { error } = await signIn(email, password)
+        if (error) {
+          setError(error.message)
+        }
+      }
+    } catch (err) {
+      setError("An error occurred")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
     try {
-      const res = await axios.get("http://127.0.0.1:8000/auth/google");
-      const { auth_url } = res.data;
-      if (auth_url) {
-        window.location.href = auth_url; // 👈 Redirect browser
-      } else {
-        alert("No Google login URL returned");
-      }
-    } catch (error) {
-      console.error("Google login error:", error);
+      await signInWithGoogle()
+    } catch (err) {
+      setError("Google sign-in failed")
+    } finally {
+      setIsGoogleLoading(false)
     }
-    // Simulate Google OAuth flow
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    
-
-    setIsGoogleLoading(false)
   }
 
   const toggleMode = () => {
@@ -100,6 +98,7 @@ export default function LoginForm() {
     setPassword("")
     setConfirmPassword("")
     setFullName("")
+    setError("")
   }
 
   return (
@@ -126,8 +125,8 @@ export default function LoginForm() {
               </span>
             </h2>
             <p className="text-xl text-muted-foreground text-balance">
-              Transform your Sinhala text into natural, expressive speech with our AI-powered voice synthesis
-              technology.
+              Transform your Sinhala text into natural, expressive speech with our
+              AI-powered voice synthesis technology.
             </p>
           </div>
 
@@ -158,7 +157,9 @@ export default function LoginForm() {
           <Card className="w-full max-w-md border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold">
-                {isSignUp ? "Create your account" : "Sign in to your account"}
+                {isSignUp
+                  ? "Create your account"
+                  : "Sign in to your account"}
               </CardTitle>
               <CardDescription>
                 {isSignUp
@@ -167,6 +168,12 @@ export default function LoginForm() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  {error}
+                </div>
+              )}
+
               <div className="space-y-4">
                 <Button
                   type="button"
@@ -203,7 +210,9 @@ export default function LoginForm() {
                     <span className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
+                    <span className="bg-card px-2 text-muted-foreground">
+                      Or continue with email
+                    </span>
                   </div>
                 </div>
               </div>
@@ -264,10 +273,9 @@ export default function LoginForm() {
                 <Button
                   type="submit"
                   className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground font-medium"
-                  disabled={isLoading}
-                  onClick={handleSubmit}
+                  disabled={loading}
                 >
-                  {isLoading
+                  {loading
                     ? isSignUp
                       ? "Creating account..."
                       : "Signing in..."
@@ -283,41 +291,45 @@ export default function LoginForm() {
                   onClick={toggleMode}
                   className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                 >
-                  {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+                  {isSignUp
+                    ? "Already have an account? Sign in"
+                    : "Don't have an account? Sign up"}
                 </button>
-                
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Confirm your email</DialogTitle>
-      <DialogDescription>
-        We’ve sent a confirmation link to <b>{email}</b>.  
-        Please check your inbox and verify your email address before logging in.
-      </DialogDescription>
-    </DialogHeader>
-    <DialogFooter>
-      <Button
-        onClick={() => {
-          setShowConfirmDialog(false)
-          setIsSignUp(false)  // switch back to login form
-          setEmail("")
-          setPassword("")
-          setConfirmPassword("")
-          setFullName("")
-        }}
-        className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground"
-      >
-        OK
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
 
+      <Dialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm your email</DialogTitle>
+            <DialogDescription>
+              We've sent a confirmation link to <b>{email}</b>. Please check your
+              inbox and verify your email address before logging in.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowConfirmDialog(false)
+                setIsSignUp(false)
+                setEmail("")
+                setPassword("")
+                setConfirmPassword("")
+                setFullName("")
+              }}
+              className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground"
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
