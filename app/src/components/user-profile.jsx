@@ -1,123 +1,84 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { User, Mail, Calendar, Settings, Crown } from "lucide-react"
+import { User, Crown } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 
-export function UserProfile({ user }) {
-  const [name, setName] = useState(user?.name || "")
-  const [email, setEmail] = useState(user?.email || "")
+export function UserProfile({ user_id }) {
+  const { user } = useAuth()
+  const [stats, setStats] = useState({
+    audios_generated: 0,
+    characters_processed: 0,
+  })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/user-stats/${user_id}`)
+        if (!response.ok) throw new Error("Failed to fetch user stats")
+
+        const data = await response.json()
+        setStats({
+          audios_generated: data.audios_generated || 0,
+          characters_processed: data.characters_processed || 0,
+        })
+      } catch (error) {
+        console.error("Error fetching user stats:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user_id) fetchUserStats()
+  }, [user_id])
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center">
-          <User className="w-5 h-5 text-primary-foreground" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">User Profile</h1>
-          <p className="text-muted-foreground">Manage your account settings and preferences</p>
-        </div>
-      </div>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <Card className="border-border/50 w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="w-10 h-10 mx-auto mb-3 bg-gradient-to-r from-primary to-accent rounded-lg flex items-center justify-center">
+            <User className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <Avatar className="w-20 h-20 mx-auto">
+            <AvatarImage
+              src={user?.user_metadata?.avatar_url}
+              alt={user?.user_metadata?.full_name || user?.email}
+            />
+            <AvatarFallback>
+              {(user?.user_metadata?.full_name || user?.email || "U").charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <CardTitle className="mt-4 text-xl font-bold">{user?.user_metadata?.full_name || user?.email}</CardTitle>
+          <CardDescription>{user?.email}</CardDescription>
+          <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground mt-2">
+            <Crown className="w-3 h-3 mr-1" />
+            Premium User
+          </Badge>
+        </CardHeader>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Profile Overview */}
-        <Card className="border-border/50">
-          <CardHeader className="text-center">
-            <Avatar className="w-20 h-20 mx-auto">
-              <AvatarFallback className="bg-gradient-to-r from-primary to-accent text-primary-foreground text-2xl">
-                {user?.name?.charAt(0) || "U"}
-              </AvatarFallback>
-            </Avatar>
-            <CardTitle className="mt-4">{user?.name}</CardTitle>
-            <CardDescription>{user?.email}</CardDescription>
-            <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground">
-              <Crown className="w-3 h-3 mr-1" />
-              Premium User
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-center">
+        <CardContent className="space-y-4 text-center">
+          {loading ? (
+            <p className="text-muted-foreground">Loading stats...</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <p className="text-2xl font-bold text-primary">47</p>
-                <p className="text-xs text-muted-foreground">Audio Generated</p>
+                <p className="text-2xl font-bold text-primary">{stats.audios_generated}</p>
+                <p className="text-xs text-muted-foreground">Audio Files Generated</p>
               </div>
               <div className="space-y-1">
-                <p className="text-2xl font-bold text-accent">12.5k</p>
+                <p className="text-2xl font-bold text-accent">
+                  {stats.characters_processed.toLocaleString()}
+                </p>
                 <p className="text-xs text-muted-foreground">Characters Processed</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Account Settings */}
-        <Card className="lg:col-span-2 border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-primary" />
-              Account Settings
-            </CardTitle>
-            <CardDescription>Update your personal information and preferences</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="profile-name">Full Name</Label>
-                <Input
-                  id="profile-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="bg-input border-border"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="profile-email">Email Address</Label>
-                <Input
-                  id="profile-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-input border-border"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4 pt-4 border-t border-border">
-              <h3 className="font-medium">Account Information</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <Calendar className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Member Since</p>
-                    <p className="text-xs text-muted-foreground">January 2024</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <Mail className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Email Verified</p>
-                    <p className="text-xs text-green-500">Verified ✓</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground">
-                Save Changes
-              </Button>
-              <Button variant="outline" className="border-border hover:bg-accent/10 bg-transparent">
-                Cancel
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
