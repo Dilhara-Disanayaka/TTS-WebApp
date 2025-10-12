@@ -2,19 +2,22 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request) {
   try {
-    const { text } = await request.json()
-    
+    console.log("Received request to /api/generate-speech")
+    const body = await request.json()
+    const { text, user_id } = body
+
+    console.log("User ID:", user_id)
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
     }
 
     // Call the FastAPI backend
-    const response = await fetch('http://localhost:8000/synthesize', {
+    const response = await fetch('http://127.0.0.1:8000/synthesize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text:text, user_id:user_id })
     })
 
     if (!response.ok) {
