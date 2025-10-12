@@ -9,7 +9,7 @@ import { AudioPlayer } from "@/components/audio-player"
 import { Mic, Volume2, Download, AudioWaveform as Waveform, Sparkles } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
-export function TTSGenerator() {
+export function TTSGenerator({ user_id }) {
   const [text, setText] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioUrl, setAudioUrl] = useState(null)
@@ -22,7 +22,7 @@ export function TTSGenerator() {
     setIsGenerating(true)
     setError("")
     setAudioUrl(null)
-
+    console.log("Generating speech for user ID:", user_id)
     try {
       // Convert Sinhala text to romanized text
       // Send romanized text to backend
@@ -30,8 +30,9 @@ export function TTSGenerator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          
         },
-        body: JSON.stringify({ text: text.trim() }),
+        body: JSON.stringify({ text: text.trim() , user_id:user_id})
       })
 
       if (!response.ok) {
