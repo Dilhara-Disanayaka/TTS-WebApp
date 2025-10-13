@@ -1,13 +1,8 @@
-
-import io
-import io
 import os
-import traceback
 from TTS.utils.synthesizer import Synthesizer
 from fastapi import FastAPI, Response,UploadFile,Form,Query,Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from phonemizer.backend.espeak.wrapper import EspeakWrapper
 from dotenv import load_dotenv
 from g2p import convert_text
 from g2p import convert_text
@@ -17,7 +12,6 @@ import uuid
 from mutagen.mp3 import MP3
 from mutagen.wave import WAVE
 import datetime
-from fastapi.responses import JSONResponse
 from num2sinhala import num_convert
 load_dotenv()
 app = FastAPI()
@@ -48,10 +42,6 @@ tts_path = "models/dinithi2.pth"
 tts_config_path = "models/dinithi2.json"
 vocoder_path = "models/dinithi_vocoder.pth"
 vocoder_config_path = "models/dinithi_vocoder.json"
-tts_path = "models/dinithi2.pth"
-tts_config_path = "models/dinithi2.json"
-vocoder_path = "models/dinithi_vocoder.pth"
-vocoder_config_path = "models/dinithi_vocoder.json"
 
 synthesizer = Synthesizer(
     tts_checkpoint=tts_path,
@@ -60,35 +50,6 @@ synthesizer = Synthesizer(
     vocoder_config=vocoder_config_path,
 )
 
-'''
-@app.post("/synthesize")
-async def synthesize(request: TextRequest):
-
-    # Convert numbers to Sinhala words
-    text_with_numbers_converted = num_convert(request.text)
-    print(f"Text after number conversion: {text_with_numbers_converted}")
-    ph = convert_text(text_with_numbers_converted)
-
-    print(f"Phonemized text: {ph}")
-    # Convert numbers to Sinhala words
-    text_with_numbers_converted = num_convert(request.text)
-    print(f"Text after number conversion: {text_with_numbers_converted}")
-    ph = convert_text(text_with_numbers_converted)
-
-    print(f"Phonemized text: {ph}")
-
-    wav = synthesizer.tts(ph)
-
-    audio_buffer = io.BytesIO()
-    synthesizer.save_wav(wav, audio_buffer)
-    audio_buffer.seek(0)
-
-    return Response(
-        content=audio_buffer.getvalue(),
-        media_type="audio/wav",
-        headers={"Content-Disposition": "inline; filename=synthesized.wav"},
-   )
-   '''
 class SignupRequest(BaseModel):
     email: str
     password: str
@@ -277,14 +238,6 @@ async def get_user_stats(user_id: str):
             "characters_processed": 0
         }
 
-
-
-
-
-
-# ---- Load TTS Models ----
-
-
 # ---- Request Model ----
 class TextRequest(BaseModel):
     text: str
@@ -361,13 +314,3 @@ async def synthesize(request: TextRequest):
         media_type="audio/wav",
         headers=headers,
     )
-
-
-
-
-
-
-
-
-
-
