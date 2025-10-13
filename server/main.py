@@ -1,5 +1,6 @@
 
 import io
+import io
 import os
 import traceback
 from TTS.utils.synthesizer import Synthesizer
@@ -8,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from phonemizer.backend.espeak.wrapper import EspeakWrapper
 from dotenv import load_dotenv
+from g2p import convert_text
 from g2p import convert_text
 from supabase import  create_client,Client
 from fastapi import HTTPException, Request
@@ -38,9 +40,14 @@ app.add_middleware(
 def read_root():
     return {"message": "Hello, Supabase with FastAPI is working!"}
 
+
 class TextRequest(BaseModel):
     text: str
 
+tts_path = "models/dinithi2.pth"
+tts_config_path = "models/dinithi2.json"
+vocoder_path = "models/dinithi_vocoder.pth"
+vocoder_config_path = "models/dinithi_vocoder.json"
 tts_path = "models/dinithi2.pth"
 tts_config_path = "models/dinithi2.json"
 vocoder_path = "models/dinithi_vocoder.pth"
@@ -63,6 +70,12 @@ async def synthesize(request: TextRequest):
     ph = convert_text(text_with_numbers_converted)
 
     print(f"Phonemized text: {ph}")
+    # Convert numbers to Sinhala words
+    text_with_numbers_converted = num_convert(request.text)
+    print(f"Text after number conversion: {text_with_numbers_converted}")
+    ph = convert_text(text_with_numbers_converted)
+
+    print(f"Phonemized text: {ph}")
 
     wav = synthesizer.tts(ph)
 
@@ -71,7 +84,7 @@ async def synthesize(request: TextRequest):
     audio_buffer.seek(0)
 
     return Response(
-       content=audio_buffer.getvalue(),
+        content=audio_buffer.getvalue(),
         media_type="audio/wav",
         headers={"Content-Disposition": "inline; filename=synthesized.wav"},
    )
@@ -135,7 +148,7 @@ async def google_auth():
         redirect_url = supabase.auth.sign_in_with_oauth(
             {
                 "provider": "google",
-                "options": {"redirect_to": "http://localhost:3000/Home"},
+                "options": {"redirect_to": "http://localhost:3000/home"},
             }
         )
         return {"auth_url": redirect_url.url}
@@ -272,7 +285,7 @@ async def get_user_stats(user_id: str):
 # ---- Request Model ----
 class TextRequest(BaseModel):
     text: str
-    user_id: str
+    user_id: str = None  # Make user_id optional
 
 
 @app.post("/synthesize")
@@ -284,36 +297,42 @@ async def synthesize(request: TextRequest):
     print(f"Phonemized text: {ph}")
 
     wav = synthesizer.tts(ph)
-    user_id = str(request.user_id)
-    # Step 3: Save to a temporary file (for Supabase upload)
+
+    # Log the user ID
+    user_id = request.user_id
+    print(f"User ID: {user_id}")
+
+    # Step 3: Save to a temporary file (for Supabase upload if user is logged in)
     audio_id = str(uuid.uuid4())
     filename = f"{audio_id}_sinh_tts.wav"
     temp_path = f"./{filename}"
 
     synthesizer.save_wav(wav, temp_path)
 
-    # Step 4: Upload to Supabase Storage
-    with open(temp_path, "rb") as f:
-        supabase.storage.from_(BUCKET_NAME).upload(filename, f)
+    # Only store in database if user is logged in
+    if user_id:
+        # Step 4: Upload to Supabase Storage
+        with open(temp_path, "rb") as f:
+            supabase.storage.from_(BUCKET_NAME).upload(filename, f)
 
-    # Get public URL
-    public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
+        # Get public URL
+        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
 
-    # Step 5: Collect metadata
-    size_kb = round(os.path.getsize(temp_path) / 1024, 2)
-    duration = get_audio_duration(temp_path)
-    created_at = datetime.datetime.utcnow().isoformat()
+        # Step 5: Collect metadata
+        size_kb = round(os.path.getsize(temp_path) / 1024, 2)
+        duration = get_audio_duration(temp_path)
+        created_at = datetime.datetime.utcnow().isoformat()
 
-    # Step 6: Insert record into Supabase table
-    supabase.table("audio").insert({
-        "id": audio_id,
-        "user_id": user_id,
-        "created_at": created_at,
-        "size": size_kb,
-        "duration": duration,
-        "url": public_url,
-        "text": request.text
-    }).execute()
+        # Step 6: Insert record into Supabase table
+        supabase.table("audio").insert({
+            "id": audio_id,
+            "user_id": str(user_id),
+            "created_at": created_at,
+            "size": size_kb,
+            "duration": duration,
+            "url": public_url,
+            "text": request.text
+        }).execute()
 
     # Step 7: Read audio bytes to return
     with open(temp_path, "rb") as f:
@@ -323,14 +342,17 @@ async def synthesize(request: TextRequest):
     os.remove(temp_path)
 
     # Step 9: Return audio to frontend (for playback)
+    headers = {"Content-Disposition": "inline; filename=synthesized.wav"}
+    if user_id:
+        headers.update({
+            "x-audio-id": audio_id,
+            "x-public-url": public_url if user_id else ""
+        })
+    
     return Response(
         content=audio_bytes,
         media_type="audio/wav",
-        headers={
-            "Content-Disposition": "inline; filename=synthesized.wav",
-            "x-audio-id": audio_id,
-            "x-public-url": public_url
-        },
+        headers=headers,
     )
 
 

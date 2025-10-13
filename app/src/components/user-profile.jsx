@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { User, Crown } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import { LoginPrompt } from "@/components/login-prompt"
 
 export function UserProfile({ user_id }) {
   const { user } = useAuth()
@@ -35,6 +36,17 @@ export function UserProfile({ user_id }) {
 
     if (user_id) fetchUserStats()
   }, [user_id])
+
+  // Show login prompt if user is not authenticated
+  if (!user_id || !user) {
+    return (
+      <LoginPrompt
+        title="Profile Access Required"
+        description="Please log in to view your profile and usage statistics."
+        feature="your profile"
+      />
+    )
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">

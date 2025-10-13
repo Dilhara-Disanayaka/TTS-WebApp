@@ -1,0 +1,23 @@
+# Core dependencies
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+python-dotenv
+supabase
+mutagen
+
+# TTS dependencies
+TTS
+phonemizer
+
+# Testing dependencies
+pytest
+pytest-asyncio
+httpx
+pytest-mock
+pytest-cov
+
+# Development dependencies
+black
+flake8

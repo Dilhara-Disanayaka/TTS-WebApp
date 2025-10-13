@@ -6,7 +6,7 @@ export async function POST(request) {
     const body = await request.json()
     const { text, user_id } = body
 
-    console.log("User ID:", user_id)
+    console.log("User ID:", user_id || "Not authenticated")
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
     }
@@ -17,7 +17,7 @@ export async function POST(request) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text:text, user_id:user_id })
+      body: JSON.stringify({ text:text, user_id: user_id || null })
     })
 
     if (!response.ok) {
