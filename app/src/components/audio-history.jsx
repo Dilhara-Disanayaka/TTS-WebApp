@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { History, Play, Download, Search, Calendar, Clock } from "lucide-react"
+import { History, Play, Pause, Download, Search, Calendar, Clock } from "lucide-react"
 import { LoginPrompt } from "@/components/login-prompt"
 import axios from "axios"
 
@@ -14,6 +14,7 @@ export function AudioHistory({ user_id }) {
   const [audioFiles, setAudioFiles] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentAudio, setCurrentAudio] = useState(null)
+  const [playingFileId, setPlayingFileId] = useState(null)
 
   // Fetch audio files from backend
   useEffect(() => {
@@ -40,13 +41,31 @@ export function AudioHistory({ user_id }) {
     file.text.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handlePlay = (url) => {
-    if (currentAudio) {
+  const handlePlay = (url, fileId) => {
+    if (currentAudio && playingFileId === fileId) {
+      // If the same audio is playing, pause it
       currentAudio.pause()
+      setCurrentAudio(null)
+      setPlayingFileId(null)
+    } else {
+      // Stop any currently playing audio
+      if (currentAudio) {
+        currentAudio.pause()
+      }
+
+      // Play new audio
+      const audio = new Audio(url)
+      setCurrentAudio(audio)
+      setPlayingFileId(fileId)
+
+      // Handle when audio ends
+      audio.addEventListener('ended', () => {
+        setCurrentAudio(null)
+        setPlayingFileId(null)
+      })
+
+      audio.play()
     }
-    const audio = new Audio(url)
-    setCurrentAudio(audio)
-    audio.play()
   }
 
   const handleDownload = (url, fileName) => {
@@ -151,9 +170,13 @@ export function AudioHistory({ user_id }) {
                     variant="outline"
                     size="sm"
                     className="border-border hover:bg-accent/10 bg-transparent"
-                    onClick={() => handlePlay(file.url)}
+                    onClick={() => handlePlay(file.url, file.id)}
                   >
-                    <Play className="w-4 h-4" />
+                    {playingFileId === file.id ? (
+                      <Pause className="w-4 h-4" />
+                    ) : (
+                      <Play className="w-4 h-4" />
+                    )}
                   </Button>
                   <Button
                     variant="outline"

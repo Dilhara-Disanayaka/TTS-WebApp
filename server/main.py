@@ -186,7 +186,10 @@ async def upload_audio(
 ):
     # Generate unique ID for audio
     ##return {"message": "Files ok  ", "user_id": user_id, "filename": file.filename}
-    user_id=uuid.UUID(user_id)
+    try:
+        user_id_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user_id format")
     audio_id = str(uuid.uuid4())
     filename = f"{audio_id}_{file.filename}"
     #return {"message": "File received ", "user_id": user_id, "filename": filename}
@@ -211,7 +214,7 @@ async def upload_audio(
         created_at = datetime.datetime.utcnow().isoformat()
         supabase.table("audio").insert({
             "id": str(audio_id),
-            "user_id": str(user_id),
+            "user_id": str(user_id_uuid),
             "created_at": created_at,
             "size": size,
             "duration": duration,
@@ -285,7 +288,7 @@ async def get_user_stats(user_id: str):
 # ---- Request Model ----
 class TextRequest(BaseModel):
     text: str
-    user_id: str = None  # Make user_id optional
+    user_id: str | None = None  # Make user_id optional
 
 
 @app.post("/synthesize")
@@ -309,30 +312,34 @@ async def synthesize(request: TextRequest):
 
     synthesizer.save_wav(wav, temp_path)
 
-    # Only store in database if user is logged in
-    if user_id:
-        # Step 4: Upload to Supabase Storage
-        with open(temp_path, "rb") as f:
-            supabase.storage.from_(BUCKET_NAME).upload(filename, f)
+    # Only store in database if user is logged in and user_id is not null
+    if user_id and user_id != "null":
+        try:
+            # Step 4: Upload to Supabase Storage
+            with open(temp_path, "rb") as f:
+                supabase.storage.from_(BUCKET_NAME).upload(filename, f)
 
-        # Get public URL
-        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
+            # Get public URL
+            public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
 
-        # Step 5: Collect metadata
-        size_kb = round(os.path.getsize(temp_path) / 1024, 2)
-        duration = get_audio_duration(temp_path)
-        created_at = datetime.datetime.utcnow().isoformat()
+            # Step 5: Collect metadata
+            size_kb = round(os.path.getsize(temp_path) / 1024, 2)
+            duration = get_audio_duration(temp_path)
+            created_at = datetime.datetime.utcnow().isoformat()
 
-        # Step 6: Insert record into Supabase table
-        supabase.table("audio").insert({
-            "id": audio_id,
-            "user_id": str(user_id),
-            "created_at": created_at,
-            "size": size_kb,
-            "duration": duration,
-            "url": public_url,
-            "text": request.text
-        }).execute()
+            # Step 6: Insert record into Supabase table
+            supabase.table("audio").insert({
+                "id": audio_id,
+                "user_id": str(user_id),
+                "created_at": created_at,
+                "size": size_kb,
+                "duration": duration,
+                "url": public_url,
+                "text": request.text
+            }).execute()
+        except Exception as e:
+            print(f"Error saving to database: {e}")
+            # Continue without saving to database
 
     # Step 7: Read audio bytes to return
     with open(temp_path, "rb") as f:
@@ -343,7 +350,7 @@ async def synthesize(request: TextRequest):
 
     # Step 9: Return audio to frontend (for playback)
     headers = {"Content-Disposition": "inline; filename=synthesized.wav"}
-    if user_id:
+    if user_id and user_id != "null":
         headers.update({
             "x-audio-id": audio_id,
             "x-public-url": public_url if user_id else ""

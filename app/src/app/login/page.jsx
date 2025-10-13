@@ -162,8 +162,6 @@ export default function LoginPage() {
             <p className="text-xl text-muted-foreground text-balance">
               Transform your Sinhala text into natural, expressive speech with our
               AI-powered voice synthesis technology.
-              Transform your Sinhala text into natural, expressive speech with our
-              AI-powered voice synthesis technology.
             </p>
           </div>
 
@@ -194,9 +192,6 @@ export default function LoginPage() {
           <Card className="w-full max-w-md border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold">
-                {isSignUp
-                  ? "Create your account"
-                  : "Sign in to your account"}
                 {isSignUp
                   ? "Create your account"
                   : "Sign in to your account"}
@@ -256,9 +251,6 @@ export default function LoginPage() {
                     <span className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">
-                      Or continue with email
-                    </span>
                     <span className="bg-card px-2 text-muted-foreground">
                       Or continue with email
                     </span>
@@ -340,9 +332,6 @@ export default function LoginPage() {
                   onClick={toggleMode}
                   className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
                 >
-                  {isSignUp
-                    ? "Already have an account? Sign in"
-                    : "Don't have an account? Sign up"}
                   {isSignUp
                     ? "Already have an account? Sign in"
                     : "Don't have an account? Sign up"}

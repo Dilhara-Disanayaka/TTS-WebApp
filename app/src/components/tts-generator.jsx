@@ -82,7 +82,7 @@ export function TTSGenerator({ user_id }) {
 
       {!user_id && (
         <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30">
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
               <div className="flex-1">
@@ -93,7 +93,7 @@ export function TTSGenerator({ user_id }) {
                     className="h-auto p-0 ml-1 text-blue-600 dark:text-blue-400 font-semibold"
                     onClick={() => router.push('/login')}
                   >
-                    <LogIn className="w-3 h-3 mr-1" />
+                    <LogIn className=" mr-1" />
                     Log in
                   </Button>
                   to save your audio files and access history.
