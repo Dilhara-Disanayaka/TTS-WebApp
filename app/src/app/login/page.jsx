@@ -39,7 +39,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (user) {
-      router.push("/home")
+      console.log("User is logged in:", user.id)
+      router.push("/home?user_id=" + user.id)
     }
   }, [user, router])
 
@@ -47,7 +48,40 @@ export default function LoginPage() {
     e.preventDefault()
     setError("")
     setLoading(true)
+    setError("")
+    setLoading(true)
 
+    if (isSignUp && password !== confirmPassword) {
+      setError("Passwords don't match")
+      setLoading(false)
+      return
+    }
+
+    if (isSignUp && fullName.trim().length < 2) {
+      setError("Please enter your full name")
+      setLoading(false)
+      return
+    }
+
+    try {
+      if (isSignUp) {
+        const { error } = await signUp(email, password)
+        if (error) {
+          setError(error.message)
+        } else {
+          setShowConfirmDialog(true)
+        }
+      } else {
+        const { error } = await signIn(email, password)
+        if (error) {
+          setError(error.message)
+        }
+      }
+    } catch (err) {
+      setError("An error occurred")
+    } finally {
+      setLoading(false)
+    }
     if (isSignUp && password !== confirmPassword) {
       setError("Passwords don't match")
       setLoading(false)
@@ -99,6 +133,7 @@ export default function LoginPage() {
     setConfirmPassword("")
     setFullName("")
     setError("")
+    setError("")
   }
 
   return (
@@ -125,6 +160,8 @@ export default function LoginPage() {
               </span>
             </h2>
             <p className="text-xl text-muted-foreground text-balance">
+              Transform your Sinhala text into natural, expressive speech with our
+              AI-powered voice synthesis technology.
               Transform your Sinhala text into natural, expressive speech with our
               AI-powered voice synthesis technology.
             </p>
@@ -160,6 +197,9 @@ export default function LoginPage() {
                 {isSignUp
                   ? "Create your account"
                   : "Sign in to your account"}
+                {isSignUp
+                  ? "Create your account"
+                  : "Sign in to your account"}
               </CardTitle>
               <CardDescription>
                 {isSignUp
@@ -168,6 +208,12 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  {error}
+                </div>
+              )}
+
               {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                   {error}
@@ -210,6 +256,9 @@ export default function LoginPage() {
                     <span className="w-full border-t border-border" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">
+                      Or continue with email
+                    </span>
                     <span className="bg-card px-2 text-muted-foreground">
                       Or continue with email
                     </span>
@@ -294,12 +343,45 @@ export default function LoginPage() {
                   {isSignUp
                     ? "Already have an account? Sign in"
                     : "Don't have an account? Sign up"}
+                  {isSignUp
+                    ? "Already have an account? Sign in"
+                    : "Don't have an account? Sign up"}
                 </button>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <Dialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm your email</DialogTitle>
+            <DialogDescription>
+              We've sent a confirmation link to <b>{email}</b>. Please check your
+              inbox and verify your email address before logging in.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowConfirmDialog(false)
+                setIsSignUp(false)
+                setEmail("")
+                setPassword("")
+                setConfirmPassword("")
+                setFullName("")
+              }}
+              className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground"
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={showConfirmDialog}

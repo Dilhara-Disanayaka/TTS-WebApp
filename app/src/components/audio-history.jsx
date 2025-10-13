@@ -6,9 +6,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { History, Play, Download, Search, Calendar, Clock } from "lucide-react"
+import { LoginPrompt } from "@/components/login-prompt"
 import axios from "axios"
 
-export function AudioHistory() {
+export function AudioHistory({ user_id }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [audioFiles, setAudioFiles] = useState([])
   const [loading, setLoading] = useState(true)
@@ -17,9 +18,13 @@ export function AudioHistory() {
   // Fetch audio files from backend
   useEffect(() => {
     const fetchAudioFiles = async () => {
+      if (!user_id) {
+        setLoading(false)
+        return
+      }
+
       try {
-        const userId = "3c48b199-f55d-4cf4-b18a-f12403d18fc7" // replace with actual user ID
-        const response = await axios.get(`http://127.0.0.1:8000/audio?user_id=${userId}`)
+        const response = await axios.get(`http://127.0.0.1:8000/audio?user_id=${user_id}`)
         setAudioFiles(response.data)
       } catch (error) {
         console.error("Error fetching audio files:", error)
@@ -29,7 +34,7 @@ export function AudioHistory() {
     }
 
     fetchAudioFiles()
-  }, [])
+  }, [user_id])
 
   const filteredFiles = audioFiles.filter((file) =>
     file.text.toLowerCase().includes(searchQuery.toLowerCase())
@@ -49,6 +54,17 @@ export function AudioHistory() {
     link.href = url
     link.download = fileName || "audio.mp3"
     link.click()
+  }
+
+  // Show login prompt if user is not authenticated
+  if (!user_id) {
+    return (
+      <LoginPrompt
+        title="Audio History Access Required"
+        description="Please log in to view your saved audio files and history."
+        feature="audio history"
+      />
+    )
   }
 
   if (loading) {
@@ -135,7 +151,7 @@ export function AudioHistory() {
                     variant="outline"
                     size="sm"
                     className="border-border hover:bg-accent/10 bg-transparent"
-                    onClick={() => handlePlay(file.audio_url)}
+                    onClick={() => handlePlay(file.url)}
                   >
                     <Play className="w-4 h-4" />
                   </Button>
@@ -143,7 +159,7 @@ export function AudioHistory() {
                     variant="outline"
                     size="sm"
                     className="border-border hover:bg-accent/10 bg-transparent"
-                    onClick={() => handleDownload(file.audio_url, `${file.text}.mp3`)}
+                    onClick={() => handleDownload(file.url, `${file.text}.mp3`)}
                   >
                     <Download className="w-4 h-4" />
                   </Button>

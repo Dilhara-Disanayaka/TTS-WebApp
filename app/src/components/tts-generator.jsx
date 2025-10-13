@@ -5,21 +5,24 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AudioPlayer } from "@/components/audio-player"
-import { Mic, Volume2, Download, AudioWaveform as Waveform, Sparkles } from "lucide-react"
+import { Mic, Volume2, Download, AudioWaveform as Waveform, Sparkles, Info, LogIn } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { useRouter } from "next/navigation"
 
-export function TTSGenerator() {
+export function TTSGenerator({ user_id }) {
   const [text, setText] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioUrl, setAudioUrl] = useState(null)
   const [error, setError] = useState("")
+  const router = useRouter()
+
   const handleGenerate = async () => {
     if (!text.trim()) return
 
     setIsGenerating(true)
     setError("")
     setAudioUrl(null)
-
+    console.log("Generating speech for user ID:", user_id)
     try {
       // Convert Sinhala text to romanized text
       // Send romanized text to backend
@@ -27,8 +30,9 @@ export function TTSGenerator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+
         },
-        body: JSON.stringify({ text: text.trim() }),
+        body: JSON.stringify({ text: text.trim(), user_id: user_id || null })
       })
 
       if (!response.ok) {
@@ -75,6 +79,30 @@ export function TTSGenerator() {
           <p className="text-muted-foreground">Convert your Sinhala text to natural speech</p>
         </div>
       </div>
+
+      {!user_id && (
+        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  You're using TTS Generator as a guest.
+                  <Button
+                    variant="link"
+                    className="h-auto p-0 ml-1 text-blue-600 dark:text-blue-400 font-semibold"
+                    onClick={() => router.push('/login')}
+                  >
+                    <LogIn className="w-3 h-3 mr-1" />
+                    Log in
+                  </Button>
+                  to save your audio files and access history.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Text Input Section */}
@@ -146,6 +174,21 @@ export function TTSGenerator() {
                     Download MP3
                   </Button>
                 </div>
+                {!user_id && (
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                      💡 This audio file won't be saved to your history.
+                      <Button
+                        variant="link"
+                        className="h-auto p-0 ml-1 text-yellow-700 dark:text-yellow-300 text-xs font-medium"
+                        onClick={() => router.push('/login')}
+                      >
+                        Log in
+                      </Button>
+                      to save and manage your files.
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
