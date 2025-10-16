@@ -4,14 +4,13 @@ export async function POST(request) {
   try {
     console.log("Received request to /api/generate-speech")
     const body = await request.json()
-    const { text, user_id, voice = "dinithi" } = body
-
+    const { text, user_id, voice } = body
     console.log("User ID:", user_id || "Not authenticated", "Voice:", voice)
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
     }
 
-    // Call the FastAPI backend
+        // Call the FastAPI backend
     const response = await fetch('http://127.0.0.1:8000/synthesize', {
       method: 'POST',
       headers: {
@@ -20,7 +19,7 @@ export async function POST(request) {
       body: JSON.stringify({ 
         text: text, 
         user_id: user_id || null,
-        voice: voice
+        voice: body.voice || "dinithi"
       })
     })
 

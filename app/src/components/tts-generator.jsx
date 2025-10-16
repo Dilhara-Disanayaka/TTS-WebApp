@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AudioPlayer } from "@/components/audio-player"
-import { Mic, Volume2, Download, AudioWaveform as Waveform, Sparkles, Info, LogIn, User } from "lucide-react"
+import { Mic, Volume2, Download, AudioWaveform as Waveform, Sparkles, Info, LogIn, User, Plus, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { VoiceManager } from "./voice-manager"
 
 export function TTSGenerator({ user_id }) {
   const [text, setText] = useState("")
@@ -19,16 +21,23 @@ export function TTSGenerator({ user_id }) {
   const [selectedVoice, setSelectedVoice] = useState("dinithi")
   const [availableVoices, setAvailableVoices] = useState([])
   const [isLoadingVoices, setIsLoadingVoices] = useState(true)
+  const [isVoiceManagerOpen, setIsVoiceManagerOpen] = useState(false)
   const router = useRouter()
 
   // Fetch available voices on component mount
   useEffect(() => {
     const fetchVoices = async () => {
       try {
-        const response = await fetch('/api/voices')
+        let url = '/api/voices'
+        if (user_id && user_id !== 'null') {
+          url += `?user_id=${user_id}`
+        }
+
+        const response = await fetch(url)
         if (response.ok) {
           const data = await response.json()
           setAvailableVoices(data.voices || [])
+          console.log('Fetched voices:', data.voices)
         } else {
           console.error('Failed to fetch voices')
           // Fallback to default voices
@@ -52,7 +61,7 @@ export function TTSGenerator({ user_id }) {
     }
 
     fetchVoices()
-  }, [])
+  }, [user_id])
 
   const handleGenerate = async () => {
     if (!text.trim()) return
@@ -74,6 +83,8 @@ export function TTSGenerator({ user_id }) {
           voice: selectedVoice
         })
       })
+
+      console.log("Sending request to backend with voice:", selectedVoice)
 
       if (!response.ok) {
         throw new Error('Failed to generate speech')
@@ -99,6 +110,32 @@ export function TTSGenerator({ user_id }) {
       link.download = `sinhala-tts-${selectedVoice}-${Date.now()}.wav`
       link.click()
     }
+  }
+
+  const handleVoiceChange = (value) => {
+    if (value === "add_voice") {
+      // Check if user is logged in
+      if (!user_id || user_id === 'null') {
+        router.push('/login')
+        return
+      }
+      // Open voice manager modal
+      setIsVoiceManagerOpen(true)
+      return
+    }
+    setSelectedVoice(value)
+  }
+
+  const handleVoiceUploaded = (newVoice) => {
+    // Add the new voice to available voices and select it
+    const voiceWithCustomFlag = { ...newVoice, is_custom: true }
+    setAvailableVoices(prev => [...prev, voiceWithCustomFlag])
+    setSelectedVoice(newVoice.id)
+    setIsVoiceManagerOpen(false)
+  }
+
+  const handleCloseVoiceManager = () => {
+    setIsVoiceManagerOpen(false)
   }
 
   return (
@@ -172,7 +209,7 @@ export function TTSGenerator({ user_id }) {
               </Label>
               <Select
                 value={selectedVoice}
-                onValueChange={setSelectedVoice}
+                onValueChange={handleVoiceChange}
                 disabled={isLoadingVoices || isGenerating}
               >
                 <SelectTrigger className="w-full">
@@ -183,7 +220,11 @@ export function TTSGenerator({ user_id }) {
                     <SelectItem key={voice.id} value={voice.id}>
                       <div className="flex items-center gap-2">
                         <span>{voice.name}</span>
-                        {voice.id !== "dinithi" ? (
+                        {voice.is_custom ? (
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                            Your Voice
+                          </Badge>
+                        ) : voice.id !== "dinithi" ? (
                           <Badge variant="outline" className="text-xs">
                             Voice Clone
                           </Badge>
@@ -195,6 +236,14 @@ export function TTSGenerator({ user_id }) {
                       </div>
                     </SelectItem>
                   ))}
+                  {user_id && user_id !== 'null' && (
+                    <SelectItem value="add_voice" className="border-t border-gray-200 mt-2 pt-2">
+                      <div className="flex items-center gap-2 text-primary">
+                        <Plus className="w-4 h-4" />
+                        <span>Add Your Voice</span>
+                      </div>
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
               {selectedVoice !== "dinithi" && (
@@ -277,6 +326,23 @@ export function TTSGenerator({ user_id }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Voice Manager Modal */}
+      <Dialog open={isVoiceManagerOpen} onOpenChange={setIsVoiceManagerOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mic className="w-5 h-5" />
+              Upload Your Voice
+            </DialogTitle>
+          </DialogHeader>
+          <VoiceManager
+            user_id={user_id}
+            onVoiceUploaded={handleVoiceUploaded}
+            isModal={true}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

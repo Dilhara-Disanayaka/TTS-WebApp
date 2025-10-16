@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:8000'}/voices`)
+    const { searchParams } = new URL(request.url)
+    const user_id = searchParams.get('user_id')
+    
+    let url = `${process.env.BACKEND_URL || 'http://localhost:8000'}/voices`
+    if (user_id) {
+      url += `?user_id=${user_id}`
+    }
+    
+    const response = await fetch(url)
     
     if (!response.ok) {
       throw new Error('Failed to fetch voices from backend')

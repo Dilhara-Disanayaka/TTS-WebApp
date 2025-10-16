@@ -1,7 +1,7 @@
 import os
 import sys
 from TTS.utils.synthesizer import Synthesizer
-from fastapi import FastAPI, Response,UploadFile,Form,Query
+from fastapi import FastAPI, Response,UploadFile,Form,Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -185,14 +185,13 @@ async def upload_audio(
     user_id: str = Form(...)
 ):
     # Generate unique ID for audio
-    ##return {"message": "Files ok  ", "user_id": user_id, "filename": file.filename}
     try:
-        user_id_uuid = uuid.UUID(user_id)
+        uuid.UUID(user_id)  # Just validate format
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid user_id format")
     audio_id = str(uuid.uuid4())
     filename = f"{audio_id}_{file.filename}"
-    #return {"message": "File received ", "user_id": user_id, "filename": filename}
+    
     # Save temporarily
     temp_path = f"./{filename}"
     try:
@@ -206,7 +205,7 @@ async def upload_audio(
     # Upload to Supabase Storage
         with open(temp_path, "rb") as f:
             supabase.storage.from_(BUCKET_NAME).upload(filename, f)
-    ##return {"message": "File uploaded successfully", "user_id": user_id, "filename": filename}
+
     # Get public URL
         public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
 
@@ -214,15 +213,12 @@ async def upload_audio(
         created_at = datetime.datetime.utcnow().isoformat()
         supabase.table("audio").insert({
             "id": str(audio_id),
-            "user_id": str(user_id_uuid),
+            "user_id": user_id,  # Store as string directly
             "created_at": created_at,
             "size": size,
             "duration": duration,
             "url": public_url
         }).execute()
-
-    # Delete temp file
-    
 
         return {
             "audio_id": audio_id,
@@ -246,10 +242,14 @@ def get_audio_files(user_id: str = Query(...)):
     # Base public URL for your bucket
     bucket_url = f"{SUPABASE_URL}/storage/v1/object/public/audio_files/"
 
-    # Add full URL for frontend playback
+    # Add full URL for frontend playback and ensure voice field exists
     for row in audio_rows:
         if "audio_url" in row and not row["audio_url"].startswith("http"):
             row["audio_url"] = bucket_url + row["audio_url"]
+        
+        # Ensure voice field exists with a default value
+        if "voice" not in row or row["voice"] is None:
+            row["voice"] = "dinithi"
 
     return audio_rows
 @app.get("/user-stats/{user_id}")
@@ -277,6 +277,110 @@ async def get_user_stats(user_id: str):
             "characters_processed": 0
         }
 
+@app.post("/upload-user-voice")
+async def upload_user_voice(
+    file: UploadFile,
+    user_id: str = Form(...),
+    voice_name: str = Form(...)
+):
+    """Upload a user's custom voice for voice cloning"""
+    try:
+        # Validate file type
+        if not file.content_type.startswith('audio/'):
+            raise HTTPException(status_code=400, detail="File must be an audio file")
+        
+        # Validate user ID format (just validate, don't convert)
+        try:
+            uuid.UUID(user_id)  # Just validate the format
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid user_id format")
+        
+        # Generate unique voice ID
+        voice_id = str(uuid.uuid4())
+        filename = f"user_voice_{voice_id}_{file.filename}"
+        
+        # Save temporarily
+        temp_path = f"./{filename}"
+        with open(temp_path, "wb") as buffer:
+            buffer.write(await file.read())
+        
+        # Get file size and duration
+        size = round(os.path.getsize(temp_path) / 1024)
+        duration = get_audio_duration(temp_path)
+        
+        # Upload to Supabase Storage
+        with open(temp_path, "rb") as f:
+            supabase.storage.from_(BUCKET_NAME).upload(filename, f)
+        
+        # Get public URL
+        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
+        
+        # Insert voice record into database
+        created_at = datetime.datetime.utcnow().isoformat()
+        supabase.table("user_voices").insert({
+            "id": voice_id,
+            "user_id": user_id,  
+            "name": voice_name,
+            "filename": filename,
+            "url": public_url,
+            "size": size,
+            "duration": duration,
+            "created_at": created_at
+        }).execute()
+        
+        # Clean up temp file
+        os.remove(temp_path)
+        
+        return {
+            "voice_id": voice_id,
+            "name": voice_name,
+            "url": public_url,
+            "size": size,
+            "duration": duration,
+            "created_at": created_at
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Clean up temp file if exists
+        if 'temp_path' in locals() and os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise HTTPException(status_code=500, detail=f"Failed to upload voice: {str(e)}")
+
+@app.get("/user-voices/{user_id}")
+async def get_user_voices(user_id: str):
+    """Get all custom voices for a user"""
+    try:
+        response = supabase.table("user_voices").select("*").eq("user_id", user_id).execute()
+        return {"voices": response.data or []}
+    except Exception as e:
+        print(f"Error fetching user voices: {e}")
+        return {"voices": []}
+
+@app.delete("/user-voices/{voice_id}")
+async def delete_user_voice(voice_id: str, user_id: str = Query(...)):
+    """Delete a user's custom voice"""
+    try:
+        # Verify the voice belongs to the user
+        response = supabase.table("user_voices").select("filename").eq("id", voice_id).eq("user_id", user_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Voice not found")
+        
+        filename = response.data[0]["filename"]
+        
+        # Delete from storage
+        supabase.storage.from_(BUCKET_NAME).remove([filename])
+        
+        # Delete from database
+        supabase.table("user_voices").delete().eq("id", voice_id).eq("user_id", user_id).execute()
+        
+        return {"message": "Voice deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete voice: {str(e)}")
+
 # ---- Request Model ----
 class TextRequest(BaseModel):
     text: str
@@ -284,7 +388,7 @@ class TextRequest(BaseModel):
     voice: str = "dinithi"  # Default voice
 
 @app.get("/voices")
-async def get_available_voices():
+async def get_available_voices(user_id: str = Query(None)):
     """Get available voices for TTS generation"""
     available_voices = []
     
@@ -292,6 +396,20 @@ async def get_available_voices():
         # Include voice if it doesn't require conversion or if voice converter is available
         if not voice_data["requires_conversion"] or voice_converter is not None:
             available_voices.append({"id": voice_id, "name": voice_data["name"]})
+    
+    # Add user's custom voice if available and user_id is provided
+    if user_id:
+        try:
+            response = supabase.table("user_voices").select("*").eq("user_id", user_id).execute()
+            if response.data:
+                for voice_record in response.data:
+                    available_voices.append({
+                        "id": f"custom_{voice_record['id']}", 
+                        "name": voice_record['name'],
+                        "is_custom": True
+                    })
+        except Exception as e:
+            print(f"Error fetching user voices: {e}")
     
     return {"voices": available_voices}
 
@@ -333,11 +451,51 @@ async def upload_to_supabase_background(temp_path: str, filename: str, audio_id:
 
 @app.post("/synthesize")
 async def synthesize(request: TextRequest, background_tasks: BackgroundTasks):
-    # Validate voice selection
-    if request.voice not in VOICE_OPTIONS:
-        raise HTTPException(status_code=400, detail=f"Invalid voice '{request.voice}'. Available voices: {list(VOICE_OPTIONS.keys())}")
+    # Check if it's a custom voice
+    is_custom_voice = request.voice.startswith("custom_")
+    voice_config = None
+    custom_voice_path = None
     
-    voice_config = VOICE_OPTIONS[request.voice]
+    if is_custom_voice:
+        # Extract voice ID and get voice file path
+        voice_id = request.voice.replace("custom_", "")
+        user_id = request.user_id
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User ID required for custom voice")
+        
+        # Get custom voice info from database
+        try:
+            response = supabase.table("user_voices").select("*").eq("id", voice_id).eq("user_id", user_id).execute()
+            if not response.data:
+                raise HTTPException(status_code=404, detail="Custom voice not found")
+            
+            voice_record = response.data[0]
+            
+            # Download the voice file temporarily for voice conversion
+            voice_url = voice_record["url"]
+            custom_voice_path = f"./temp_custom_voice_{voice_id}.wav"
+            
+            # Download the custom voice file
+            import requests
+            response = requests.get(voice_url)
+            with open(custom_voice_path, "wb") as f:
+                f.write(response.content)
+            
+            # Set up voice config for custom voice
+            voice_config = {
+                "name": voice_record["name"],
+                "requires_conversion": True,
+                "reference_audio": custom_voice_path
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to load custom voice: {str(e)}")
+    else:
+        # Validate standard voice selection
+        if request.voice not in VOICE_OPTIONS:
+            raise HTTPException(status_code=400, detail=f"Invalid voice '{request.voice}'. Available voices: {list(VOICE_OPTIONS.keys())}")
+        
+        voice_config = VOICE_OPTIONS[request.voice]
     
     # Convert numbers to Sinhala
     text_with_numbers_converted = num_convert(request.text)
@@ -415,7 +573,7 @@ async def synthesize(request: TextRequest, background_tasks: BackgroundTasks):
             audio_id, 
             user_id, 
             request.text,
-            request.voice
+            voice_config["name"]
         )
         
         # Return with headers for logged-in users
@@ -432,9 +590,42 @@ async def synthesize(request: TextRequest, background_tasks: BackgroundTasks):
             "x-voice": request.voice
         }
 
+    # Clean up custom voice file if it was used
+    if custom_voice_path and os.path.exists(custom_voice_path):
+        os.remove(custom_voice_path)
+
     # Return audio to frontend immediately
     return Response(
         content=audio_bytes,
         media_type="audio/wav",
         headers=headers,
     )
+
+@app.delete("/audio/{audio_id}")
+async def delete_audio(audio_id: str, user_id: str = Query(...)):
+    """Delete an audio file"""
+    try:
+        # Verify the audio belongs to the user
+        response = supabase.table("audio").select("url").eq("id", audio_id).eq("user_id", user_id).execute()
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Audio file not found")
+        
+        audio_url = response.data[0]["url"]
+        
+        # Extract filename from URL
+        filename = audio_url.split("/")[-1]
+        
+        # Delete from storage
+        try:
+            supabase.storage.from_(BUCKET_NAME).remove([filename])
+        except Exception as e:
+            print(f"Warning: Failed to delete from storage: {e}")
+        
+        # Delete from database
+        supabase.table("audio").delete().eq("id", audio_id).eq("user_id", user_id).execute()
+        
+        return {"message": "Audio file deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete audio file: {str(e)}")
