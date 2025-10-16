@@ -1,20 +1,58 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AudioPlayer } from "@/components/audio-player"
-import { Mic, Volume2, Download, AudioWaveform as Waveform, Sparkles, Info, LogIn } from "lucide-react"
+import { Mic, Volume2, Download, AudioWaveform as Waveform, Sparkles, Info, LogIn, User } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 
 export function TTSGenerator({ user_id }) {
   const [text, setText] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [audioUrl, setAudioUrl] = useState(null)
   const [error, setError] = useState("")
+  const [selectedVoice, setSelectedVoice] = useState("dinithi")
+  const [availableVoices, setAvailableVoices] = useState([])
+  const [isLoadingVoices, setIsLoadingVoices] = useState(true)
   const router = useRouter()
+
+  // Fetch available voices on component mount
+  useEffect(() => {
+    const fetchVoices = async () => {
+      try {
+        const response = await fetch('/api/voices')
+        if (response.ok) {
+          const data = await response.json()
+          setAvailableVoices(data.voices || [])
+        } else {
+          console.error('Failed to fetch voices')
+          // Fallback to default voices
+          setAvailableVoices([
+            { id: "dinithi", name: "Dinithi" },
+            { id: "jerry", name: "Jerry" },
+            { id: "obama", name: "Obama" }
+          ])
+        }
+      } catch (error) {
+        console.error('Error fetching voices:', error)
+        // Fallback to default voices
+        setAvailableVoices([
+          { id: "dinithi", name: "Dinithi" },
+          { id: "jerry", name: "Jerry" },
+          { id: "obama", name: "Obama" }
+        ])
+      } finally {
+        setIsLoadingVoices(false)
+      }
+    }
+
+    fetchVoices()
+  }, [])
 
   const handleGenerate = async () => {
     if (!text.trim()) return
@@ -22,17 +60,19 @@ export function TTSGenerator({ user_id }) {
     setIsGenerating(true)
     setError("")
     setAudioUrl(null)
-    console.log("Generating speech for user ID:", user_id)
+    console.log("Generating speech for user ID:", user_id, "with voice:", selectedVoice)
     try {
-      // Convert Sinhala text to romanized text
-      // Send romanized text to backend
+      // Send text and voice selection to backend
       const response = await fetch('/api/generate-speech', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-
         },
-        body: JSON.stringify({ text: text.trim(), user_id: user_id || null })
+        body: JSON.stringify({
+          text: text.trim(),
+          user_id: user_id || null,
+          voice: selectedVoice
+        })
       })
 
       if (!response.ok) {
@@ -43,13 +83,6 @@ export function TTSGenerator({ user_id }) {
       const audioBlob = await response.blob()
       const url = URL.createObjectURL(audioBlob)
       setAudioUrl(url)
-
-      // // Auto play the audio
-      // setTimeout(() => {
-      //   if (audioRef.current) {
-      //     audioRef.current.play()
-      //   }
-      // }, 100)
 
     } catch (err) {
       console.error('Error generating speech:', err)
@@ -63,7 +96,7 @@ export function TTSGenerator({ user_id }) {
     if (audioUrl) {
       const link = document.createElement("a")
       link.href = audioUrl
-      link.download = `sinhala-tts-${Date.now()}.mp3`
+      link.download = `sinhala-tts-${selectedVoice}-${Date.now()}.wav`
       link.click()
     }
   }
@@ -120,7 +153,7 @@ export function TTSGenerator({ user_id }) {
                 placeholder="ඔබේ සිංහල පෙළ මෙහි ටයිප් කරන්න..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="min-h-[200px] sinhala-text text-lg bg-input border-border resize-none"
+                className="min-h-[150px] sinhala-text text-lg bg-input border-border resize-none"
               />
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>{text.length} characters</span>
@@ -131,9 +164,49 @@ export function TTSGenerator({ user_id }) {
               </div>
             </div>
 
+            {/* Voice Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="voice-select" className="text-sm font-medium flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Voice Selection
+              </Label>
+              <Select
+                value={selectedVoice}
+                onValueChange={setSelectedVoice}
+                disabled={isLoadingVoices || isGenerating}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a voice" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableVoices.map((voice) => (
+                    <SelectItem key={voice.id} value={voice.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{voice.name}</span>
+                        {voice.id !== "dinithi" ? (
+                          <Badge variant="outline" className="text-xs">
+                            Voice Clone
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            Default
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedVoice !== "dinithi" && (
+                <p className="text-xs text-muted-foreground">
+                  This voice uses AI voice conversion technology for enhanced quality. This may take slightly longer to generate.
+                </p>
+              )}
+            </div>
+
             <Button
               onClick={handleGenerate}
-              disabled={!text.trim() || isGenerating}
+              disabled={!text.trim() || isGenerating || isLoadingVoices}
               className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground font-medium"
             >
               {isGenerating ? (

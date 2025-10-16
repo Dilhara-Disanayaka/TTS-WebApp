@@ -4,9 +4,9 @@ export async function POST(request) {
   try {
     console.log("Received request to /api/generate-speech")
     const body = await request.json()
-    const { text, user_id } = body
+    const { text, user_id, voice = "dinithi" } = body
 
-    console.log("User ID:", user_id || "Not authenticated")
+    console.log("User ID:", user_id || "Not authenticated", "Voice:", voice)
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
     }
@@ -17,7 +17,11 @@ export async function POST(request) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text:text, user_id: user_id || null })
+      body: JSON.stringify({ 
+        text: text, 
+        user_id: user_id || null,
+        voice: voice
+      })
     })
 
     if (!response.ok) {

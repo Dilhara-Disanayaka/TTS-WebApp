@@ -1,6 +1,7 @@
 import os
+import sys
 from TTS.utils.synthesizer import Synthesizer
-from fastapi import FastAPI, Response,UploadFile,Form,Query,Header
+from fastapi import FastAPI, Response,UploadFile,Form,Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -13,6 +14,12 @@ from mutagen.mp3 import MP3
 from mutagen.wave import WAVE
 import datetime
 from num2sinhala import num_convert
+from fastapi import BackgroundTasks
+import soundfile as sf
+
+# Add the vc directory to Python path for proper imports
+sys.path.append(os.path.join(os.path.dirname(__file__), 'vc'))
+
 load_dotenv()
 app = FastAPI()
 
@@ -49,6 +56,38 @@ synthesizer = Synthesizer(
     vocoder_checkpoint=vocoder_path,
     vocoder_config=vocoder_config_path,
 )
+
+# Initialize voice converter with error handling
+voice_converter = None
+try:
+    from vc.voice_converter import VoiceConverter
+    voice_converter = VoiceConverter(
+        checkpoint_path="vc/checkpoints/Indic-seed-uvit-whisper-small-wavenet.pth",
+        config_path="vc/checkpoints/config_dit_mel_seed_uvit_whisper_small_wavenet.yml"
+    )
+    print("Voice converter initialized successfully")
+except Exception as e:
+    print(f"Warning: Voice converter initialization failed: {e}")
+    print("Voice conversion features will be disabled. Only default Dinithi voice will be available.")
+
+# Voice options mapping
+VOICE_OPTIONS = {
+    "dinithi": {
+        "name": "Dinithi",
+        "requires_conversion": False,
+        "reference_audio": None
+    },
+    "jerry": {
+        "name": "Jerry",
+        "requires_conversion": True,
+        "reference_audio": "voices/jerry.mp3"
+    },
+    "obama": {
+        "name": "Obama",
+        "requires_conversion": True,
+        "reference_audio": "voices/obama.mp3"
+    }
+}
 
 class SignupRequest(BaseModel):
     email: str
@@ -242,73 +281,158 @@ async def get_user_stats(user_id: str):
 class TextRequest(BaseModel):
     text: str
     user_id: str | None = None  # Make user_id optional
+    voice: str = "dinithi"  # Default voice
 
+@app.get("/voices")
+async def get_available_voices():
+    """Get available voices for TTS generation"""
+    available_voices = []
+    
+    for voice_id, voice_data in VOICE_OPTIONS.items():
+        # Include voice if it doesn't require conversion or if voice converter is available
+        if not voice_data["requires_conversion"] or voice_converter is not None:
+            available_voices.append({"id": voice_id, "name": voice_data["name"]})
+    
+    return {"voices": available_voices}
+
+
+async def upload_to_supabase_background(temp_path: str, filename: str, audio_id: str, user_id: str, text: str, voice: str):
+    """Background task to upload audio to Supabase"""
+    try:
+        # Upload to Supabase Storage
+        with open(temp_path, "rb") as f:
+            supabase.storage.from_(BUCKET_NAME).upload(filename, f)
+
+        # Get public URL
+        public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
+
+        # Collect metadata
+        size_kb = round(os.path.getsize(temp_path) / 1024, 2)
+        duration = get_audio_duration(temp_path)
+        created_at = datetime.datetime.utcnow().isoformat()
+
+        # Insert record into Supabase table
+        supabase.table("audio").insert({
+            "id": audio_id,
+            "user_id": str(user_id),
+            "created_at": created_at,
+            "size": size_kb,
+            "duration": duration,
+            "url": public_url,
+            "text": text,
+            "voice": voice
+        }).execute()
+        
+        print(f"Successfully uploaded audio {audio_id} to Supabase")
+    except Exception as e:
+        print(f"Error uploading to Supabase: {e}")
+    finally:
+        # Clean up temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 @app.post("/synthesize")
-async def synthesize(request: TextRequest):
+async def synthesize(request: TextRequest, background_tasks: BackgroundTasks):
+    # Validate voice selection
+    if request.voice not in VOICE_OPTIONS:
+        raise HTTPException(status_code=400, detail=f"Invalid voice '{request.voice}'. Available voices: {list(VOICE_OPTIONS.keys())}")
+    
+    voice_config = VOICE_OPTIONS[request.voice]
+    
+    # Convert numbers to Sinhala
     text_with_numbers_converted = num_convert(request.text)
     print(f"Text after number conversion: {text_with_numbers_converted}")
+    
+    # Convert to phonemes
     ph = convert_text(text_with_numbers_converted)
-
     print(f"Phonemized text: {ph}")
 
+    # Generate base audio using Dinithi model
     wav = synthesizer.tts(ph)
 
-    # Log the user ID
+    # Log the user ID and voice
     user_id = request.user_id
-    print(f"User ID: {user_id}")
+    print(f"User ID: {user_id}, Selected Voice: {request.voice}")
 
-    # Step 3: Save to a temporary file (for Supabase upload if user is logged in)
+    # Generate unique filename
     audio_id = str(uuid.uuid4())
-    filename = f"{audio_id}_sinh_tts.wav"
-    temp_path = f"./{filename}"
+    
+    # Step 1: Save base audio
+    base_filename = f"{audio_id}_base_dinithi.wav"
+    base_temp_path = f"./{base_filename}"
+    synthesizer.save_wav(wav, base_temp_path)
 
-    synthesizer.save_wav(wav, temp_path)
+    # Step 2: Apply voice conversion if needed
+    if voice_config["requires_conversion"]:
+        if voice_converter is None:
+            print(f"Voice conversion requested for {request.voice} but voice converter not available. Using default voice.")
+            # Fallback to original audio
+            final_filename = f"{audio_id}_dinithi_fallback.wav"
+            final_temp_path = base_temp_path
+        else:
+            print(f"Applying voice conversion to {request.voice}")
+            try:
+                # Perform voice conversion
+                sr, converted_audio = voice_converter.convert_voice(
+                    source_audio_path=base_temp_path,
+                    target_audio_path=voice_config["reference_audio"],
+                    diffusion_steps=10,  # Balance between quality and speed
+                    length_adjust=1.0,
+                    inference_cfg_rate=0.7
+                )
+                
+                # Save converted audio
+                final_filename = f"{audio_id}_{request.voice}_tts.wav"
+                final_temp_path = f"./{final_filename}"
+                sf.write(final_temp_path, converted_audio, sr)
+                
+                # Clean up base audio
+                if os.path.exists(base_temp_path):
+                    os.remove(base_temp_path)
+                    
+            except Exception as e:
+                print(f"Voice conversion failed: {e}")
+                # Fallback to original audio
+                final_filename = f"{audio_id}_dinithi_fallback.wav"
+                final_temp_path = base_temp_path
+            
+    else:
+        # Use original Dinithi audio
+        final_filename = f"{audio_id}_dinithi_tts.wav"
+        final_temp_path = base_temp_path
+
+    # Read final audio bytes to return immediately
+    with open(final_temp_path, "rb") as f:
+        audio_bytes = f.read()
 
     # Only store in database if user is logged in and user_id is not null
     if user_id and user_id != "null":
-        try:
-            # Step 4: Upload to Supabase Storage
-            with open(temp_path, "rb") as f:
-                supabase.storage.from_(BUCKET_NAME).upload(filename, f)
-
-            # Get public URL
-            public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
-
-            # Step 5: Collect metadata
-            size_kb = round(os.path.getsize(temp_path) / 1024, 2)
-            duration = get_audio_duration(temp_path)
-            created_at = datetime.datetime.utcnow().isoformat()
-
-            # Step 6: Insert record into Supabase table
-            supabase.table("audio").insert({
-                "id": audio_id,
-                "user_id": str(user_id),
-                "created_at": created_at,
-                "size": size_kb,
-                "duration": duration,
-                "url": public_url,
-                "text": request.text
-            }).execute()
-        except Exception as e:
-            print(f"Error saving to database: {e}")
-            # Continue without saving to database
-
-    # Step 7: Read audio bytes to return
-    with open(temp_path, "rb") as f:
-        audio_bytes = f.read()
-
-    # Step 8: Delete temp file
-    os.remove(temp_path)
-
-    # Step 9: Return audio to frontend (for playback)
-    headers = {"Content-Disposition": "inline; filename=synthesized.wav"}
-    if user_id and user_id != "null":
-        headers.update({
+        # Add background task for upload
+        background_tasks.add_task(
+            upload_to_supabase_background, 
+            final_temp_path, 
+            final_filename, 
+            audio_id, 
+            user_id, 
+            request.text,
+            request.voice
+        )
+        
+        # Return with headers for logged-in users
+        headers = {
+            "Content-Disposition": f"inline; filename=synthesized_{request.voice}.wav",
             "x-audio-id": audio_id,
-            "x-public-url": public_url if user_id else ""
-        })
-    
+            "x-voice": request.voice
+        }
+    else:
+        # For non-logged-in users, delete temp file immediately
+        os.remove(final_temp_path)
+        headers = {
+            "Content-Disposition": f"inline; filename=synthesized_{request.voice}.wav",
+            "x-voice": request.voice
+        }
+
+    # Return audio to frontend immediately
     return Response(
         content=audio_bytes,
         media_type="audio/wav",

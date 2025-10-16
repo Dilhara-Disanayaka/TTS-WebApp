@@ -39,7 +39,7 @@ export function AudioHistory({ user_id }) {
 
   const filteredFiles = audioFiles.filter((file) =>
     file.text.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
   const handlePlay = (url, fileId) => {
     if (currentAudio && playingFileId === fileId) {
