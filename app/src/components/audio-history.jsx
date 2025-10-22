@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { History, Play, Download, Search, Calendar, Clock } from "lucide-react"
+import { History, Play, Pause, Download, Search, Calendar, Clock, Mic, Trash2 } from "lucide-react"
 import { LoginPrompt } from "@/components/login-prompt"
 import axios from "axios"
 
@@ -14,6 +14,8 @@ export function AudioHistory({ user_id }) {
   const [audioFiles, setAudioFiles] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentAudio, setCurrentAudio] = useState(null)
+  const [playingFileId, setPlayingFileId] = useState(null)
+  const [deletingFileId, setDeletingFileId] = useState(null)
 
   // Fetch audio files from backend
   useEffect(() => {
@@ -38,15 +40,33 @@ export function AudioHistory({ user_id }) {
 
   const filteredFiles = audioFiles.filter((file) =>
     file.text.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
-  const handlePlay = (url) => {
-    if (currentAudio) {
+  const handlePlay = (url, fileId) => {
+    if (currentAudio && playingFileId === fileId) {
+      // If the same audio is playing, pause it
       currentAudio.pause()
+      setCurrentAudio(null)
+      setPlayingFileId(null)
+    } else {
+      // Stop any currently playing audio
+      if (currentAudio) {
+        currentAudio.pause()
+      }
+
+      // Play new audio
+      const audio = new Audio(url)
+      setCurrentAudio(audio)
+      setPlayingFileId(fileId)
+
+      // Handle when audio ends
+      audio.addEventListener('ended', () => {
+        setCurrentAudio(null)
+        setPlayingFileId(null)
+      })
+
+      audio.play()
     }
-    const audio = new Audio(url)
-    setCurrentAudio(audio)
-    audio.play()
   }
 
   const handleDownload = (url, fileName) => {
@@ -54,6 +74,44 @@ export function AudioHistory({ user_id }) {
     link.href = url
     link.download = fileName || "audio.mp3"
     link.click()
+  }
+
+  const formatVoiceName = (voice) => {
+    if (!voice) return "Dinithi" // Default fallback
+
+    if (voice.startsWith("custom_")) {
+      return voice.replace("custom_", "").charAt(0).toUpperCase() + voice.replace("custom_", "").slice(1)
+    }
+
+    // Capitalize first letter for standard voices
+    return voice.charAt(0).toUpperCase() + voice.slice(1)
+  }
+
+  const handleDelete = async (fileId) => {
+    if (!window.confirm("Are you sure you want to delete this audio file? This action cannot be undone.")) {
+      return
+    }
+
+    setDeletingFileId(fileId)
+
+    try {
+      await axios.delete(`http://127.0.0.1:8000/audio/${fileId}?user_id=${user_id}`)
+
+      // Remove from local state
+      setAudioFiles(prevFiles => prevFiles.filter(file => file.id !== fileId))
+
+      // Stop audio if it's currently playing
+      if (playingFileId === fileId && currentAudio) {
+        currentAudio.pause()
+        setCurrentAudio(null)
+        setPlayingFileId(null)
+      }
+    } catch (error) {
+      console.error("Error deleting audio file:", error)
+      alert("Failed to delete audio file. Please try again.")
+    } finally {
+      setDeletingFileId(null)
+    }
   }
 
   // Show login prompt if user is not authenticated
@@ -128,6 +186,10 @@ export function AudioHistory({ user_id }) {
                     <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
                       completed
                     </Badge>
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 flex items-center gap-1">
+                      <Mic className="w-3 h-3" />
+                      {formatVoiceName(file.voice)}
+                    </Badge>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {new Date(file.created_at).toLocaleString()}
@@ -151,9 +213,13 @@ export function AudioHistory({ user_id }) {
                     variant="outline"
                     size="sm"
                     className="border-border hover:bg-accent/10 bg-transparent"
-                    onClick={() => handlePlay(file.url)}
+                    onClick={() => handlePlay(file.url, file.id)}
                   >
-                    <Play className="w-4 h-4" />
+                    {playingFileId === file.id ? (
+                      <Pause className="w-4 h-4" />
+                    ) : (
+                      <Play className="w-4 h-4" />
+                    )}
                   </Button>
                   <Button
                     variant="outline"
@@ -162,6 +228,19 @@ export function AudioHistory({ user_id }) {
                     onClick={() => handleDownload(file.url, `${file.text}.mp3`)}
                   >
                     <Download className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-500/20 text-red-500 hover:bg-red-500/10 bg-transparent"
+                    onClick={() => handleDelete(file.id)}
+                    disabled={deletingFileId === file.id}
+                  >
+                    {deletingFileId === file.id ? (
+                      <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               </div>

@@ -19,3 +19,8 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+
+# pytest cache
+.pytest_cache/
+
+server/vc/checkpoints/

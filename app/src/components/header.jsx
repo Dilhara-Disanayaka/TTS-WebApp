@@ -41,7 +41,10 @@ function HeaderContent() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.full_name || user.email} />
+                    <AvatarImage
+                      src={user.user_metadata?.picture}
+                      alt={user.user_metadata?.full_name || user.email}
+                    />
                     <AvatarFallback className="bg-primary text-primary-foreground">
                       {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0) || "U"}
                     </AvatarFallback>
