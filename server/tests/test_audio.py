@@ -1,12 +1,8 @@
 import pytest
-from unittest.mock import patch, Mock, mock_open
-import tempfile
-import os
+from unittest.mock import patch, mock_open
 from fastapi.testclient import TestClient
-from fastapi import UploadFile
 from main import app, get_audio_duration
 import io
-
 
 @pytest.mark.unit
 class TestAudioUpload:

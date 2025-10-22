@@ -5,8 +5,9 @@ from fastapi import FastAPI, Response,UploadFile,Form,Query, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+import torch
 from g2p import convert_text
-from g2p import convert_text
+from short2sinhala import short_convert
 from supabase import  create_client,Client
 from fastapi import HTTPException, Request
 import uuid
@@ -50,11 +51,15 @@ tts_config_path = "models/dinithi2.json"
 vocoder_path = "models/dinithi_vocoder.pth"
 vocoder_config_path = "models/dinithi_vocoder.json"
 
+use_cuda = torch.cuda.is_available()
+print(f"CUDA available: {use_cuda}, device_count: {torch.cuda.device_count()}")
+
 synthesizer = Synthesizer(
     tts_checkpoint=tts_path,
     tts_config_path=tts_config_path,
     vocoder_checkpoint=vocoder_path,
     vocoder_config=vocoder_config_path,
+    use_cuda=use_cuda
 )
 
 # Initialize voice converter with error handling
@@ -496,9 +501,13 @@ async def synthesize(request: TextRequest, background_tasks: BackgroundTasks):
             raise HTTPException(status_code=400, detail=f"Invalid voice '{request.voice}'. Available voices: {list(VOICE_OPTIONS.keys())}")
         
         voice_config = VOICE_OPTIONS[request.voice]
+
+    # Convert short forms in the text
+    text = short_convert(request.text)
+    print(f"Converted text: {text}")
     
     # Convert numbers to Sinhala
-    text_with_numbers_converted = num_convert(request.text)
+    text_with_numbers_converted = num_convert(text)
     print(f"Text after number conversion: {text_with_numbers_converted}")
     
     # Convert to phonemes
@@ -534,7 +543,7 @@ async def synthesize(request: TextRequest, background_tasks: BackgroundTasks):
                 sr, converted_audio = voice_converter.convert_voice(
                     source_audio_path=base_temp_path,
                     target_audio_path=voice_config["reference_audio"],
-                    diffusion_steps=10,  # Balance between quality and speed
+                    diffusion_steps=5,  # Balance between quality and speed
                     length_adjust=1.0,
                     inference_cfg_rate=0.7
                 )

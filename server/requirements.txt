@@ -6,10 +6,10 @@ pydantic
 python-dotenv
 supabase
 mutagen
+munch
 
 # TTS dependencies
 TTS
-phonemizer
 
 # Testing dependencies
 pytest
