@@ -3,9 +3,6 @@ import os
 import tempfile
 from fastapi.testclient import TestClient
 from unittest.mock import Mock, patch, MagicMock
-import io
-
-# Mock heavy dependencies to avoid import errors during testing
 import sys
 from unittest.mock import MagicMock
 
@@ -15,8 +12,6 @@ sys.modules['TTS.utils'] = MagicMock()
 sys.modules['TTS.utils.synthesizer'] = MagicMock()
 sys.modules['phonemizer'] = MagicMock()
 sys.modules['phonemizer.backend'] = MagicMock()
-sys.modules['phonemizer.backend.espeak'] = MagicMock()
-sys.modules['phonemizer.backend.espeak.wrapper'] = MagicMock()
 sys.modules['supabase'] = MagicMock()
 sys.modules['mutagen'] = MagicMock()
 sys.modules['mutagen.mp3'] = MagicMock()
