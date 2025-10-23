@@ -1,5 +1,5 @@
 {
-    "output_path": "output/tacotron2-Dinithi2",
+    "output_path": "output/tacotron2-Dinithi3",
     "logger_uri": null,
     "run_name": "sinhala-ddc",
     "project_name": null,
@@ -55,13 +55,13 @@
     "num_eval_loader_workers": 3,
     "use_noise_augment": false,
     "audio": {
-        "fft_size": 2048,
-        "win_length": 2048,
+        "fft_size": 1024,
+        "win_length": 1024,
         "hop_length": 256,
         "frame_shift_ms": null,
         "frame_length_ms": null,
         "stft_pad_mode": "reflect",
-        "sample_rate": 41100,
+        "sample_rate": 22050,
         "resample": false,
         "preemphasis": 0.0,
         "ref_level_db": 20,
@@ -205,6 +205,6 @@
     "decoder_ssim_alpha": 0.0,
     "postnet_ssim_alpha": 0.0,
     "ga_alpha": 5.0,
-    "restore_path": "C:/Users/tumas/OneDrive/Desktop/Sinhala-TTS/output/tacotron2-Dinithi2/sinhala-ddc-October-03-2025_11+30PM-c742b21/checkpoint_327500.pth",
+    "restore_path": "output\\tacotron2-Dinithi2\\sinhala-ddc-October-03-2025_11+30PM-c742b21\\checkpoint_327500.pth",
     "github_branch": "* main"
 }

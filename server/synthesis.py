@@ -5,8 +5,8 @@ from num2sinhala import num_convert
 from short2sinhala import short_convert
 import torch
 
-tts_path = "server/models/dinithi2.pth"
-tts_config_path = "server/models/dinithi2.json"
+tts_path = "server/models/dinithi.pth"
+tts_config_path = "server/models/dinithi.json"
 vocoder_path = "server/models/dinithi_vocoder.pth"
 vocoder_config_path = "server/models/dinithi_vocoder.json"
 

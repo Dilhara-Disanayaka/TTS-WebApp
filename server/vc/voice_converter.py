@@ -426,7 +426,7 @@ def generate_voice_conversion(source_audio_path, target_audio_path,
         ...     diffusion_steps=50
         ... )
         >>> # Save output
-        >>> import soundfile as sf
+        >>> import soundfile as sf 
         >>> sf.write("output.wav", audio, sr)
     """
     converter = VoiceConverter(checkpoint_path, config_path, device, fp16)
@@ -435,6 +435,6 @@ def generate_voice_conversion(source_audio_path, target_audio_path,
 
 
 if __name__ == "__main__":
-   sr,audio = generate_voice_conversion(source_audio_path="server/voices/source.mp3", target_audio_path="server/voices/obama.mp3",checkpoint_path="server/vc/checkpoints/Indic-seed-uvit-whisper-small-wavenet.pth",config_path="server/vc/checkpoints/config_dit_mel_seed_uvit_whisper_small_wavenet.yml")
+   sr,audio = generate_voice_conversion(source_audio_path="server/voices/source.mp3", target_audio_path="server/voices/obama.mp3",checkpoint_path="server/vc/checkpoints/vc.pth",config_path="server/vc/checkpoints/vc.yml")
 
    sf.write("converted_output.wav", audio, sr)
